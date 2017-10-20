@@ -1,4 +1,4 @@
-ABOUT *VERIFY*
+#|ABOUT *VERIFY*
 
 The matrix math code can be run with or without verification that the
 various matrices are the right size for the operations.  Without checking
