@@ -172,6 +172,10 @@
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
 
+	;ANSON
+	;I'll need to review algorithm pseudocode, but basically update the utility value of the appropriate state-action pair using reward * alpha(?) (and then backprop?) (figure out how next-state, gamma, and iteration are used. Iteration as param for alpha-func I think)
+	;uses (basic-alpha)
+  
   ;;; IMPLEMENT ME
 )
 
@@ -196,6 +200,8 @@
   "Returns a q-table after learning how to play nim"
 
   ;;; IMPLEMENT ME
+  
+  ; SHIKA
   ; a very rough pseudocde! ---
   ; refer- https://gist.github.com/vo/9045230
   ; do times num iter i
@@ -243,6 +249,11 @@
 (defun play-nim (q-table heap-size)
   "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."
   ;;; IMPLEMENT ME
+  
+  ;ANSON
+  ;ask-if-user-goes-first, initialize state, update alternatingly with actions from q-table and make-user-move, report winner
+  ;uses (make-user-move), (ask-if-user-goes-first)
+  
   )
 
 
@@ -250,6 +261,10 @@
   "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
   ;; hint: see optional value in max-action function
 
+  ;ANSON
+  ;mapcar q-table through max-action function with “-” as val parameter
+  ;uses (max-action)
+  
   ;;; IMPLEMENT ME
   )
 
