@@ -245,9 +245,10 @@
   ;;; IMPLEMENT ME
   (let ((turn 0) (current-state 0) (user 0) (actions (best-actions q-table)))
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
-  (loop while (< current-state heapsize)
-        do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (elt actions current-state))))
-        do (if (= turn 0) (setf turn 1) (setf turn 0))))
+  (loop while (< current-state heap-size)
+        do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (elt actions current-state) 1)))))
+        do (if (= turn 0) (setf turn 1) (setf turn 0))
+        do (format t "Sticks remaining: %d\n" (- heap-size current-state))))
   )
 
 ;Anthony!
