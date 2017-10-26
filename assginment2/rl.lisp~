@@ -168,6 +168,7 @@
   (declare (ignore iteration)) ;; quiets compiler complaints
   *basic-alpha*)
 
+
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
 
@@ -204,7 +205,7 @@
   ;       if(randelt(numiter)>randelt(i))
   ;         myaction=random elt(num-actions)
   ;       else
-  ;         myaction=best-actions(q,state) ;Shika: use max-action here. I don't think best-actions is intended for this ~AS
+  ;         myaction=best-actions(q,state)
   ;       state=state+myaction+1
   ;       if (state >=noof sticks)
   ;         reward =-1
@@ -239,31 +240,17 @@
        (return result))
      (format t "~%Answer must be between 1 and 3"))))
 
-;Anthony Will Do!
 (defun play-nim (q-table heap-size)
   "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."
   ;;; IMPLEMENT ME
-  (let ((turn 0) (current-state 0) (user 0) (actions (best-actions q-table)))
-  (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
-  (loop while (< current-state heapsize)
-        do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (elt actions current-state))))
-        do (if (= turn 0) (setf turn 1) (setf turn 0))))
   )
 
-;Anthony!
-;;Is it just me, or does this seem too easy? It talks in places about a list, and actions is plural... but why would we want a list of actions? just getting the best one should suffice, right? What others would there be? Or is it meant to be a list of actions for all states up to game finish? That's what I'm going to do for now...
+
 (defun best-actions (q-table)
   "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
   ;; hint: see optional value in max-action function
-  (let ((current-state (num-states q-table)) bag)
-    (dotimes (num-states q-table)
-              (push (max-action q-table current-state "-") bag)
-              (- current-state 1))
-    (print bag))
+
   ;;; IMPLEMENT ME
-  ;too easy? I should think so
-  ;Also would require me to either A) add a current-state input parameter to the function or B) have us use a global *current-state* variable. I assume Luke means for the above instead
-  ;(max-action q-table *current-state* "-")
   )
 
 
