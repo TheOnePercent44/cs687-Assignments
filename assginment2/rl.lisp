@@ -172,6 +172,24 @@
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
 
   ;;; IMPLEMENT ME
+  ;Q[current-state][action] = (1.0 - alpha) * Q[current_state][action] 
+                                  ;+ alpha * (reward + gamma * Q[next-state][max_action(Q-able,next-state)])
+
+  (setf (aref q-table current-state action) 
+    
+    (+  (* (- 1.0 alpha-func) 
+           (aref q-table current-state action) 
+          )
+          (*  alpha-func 
+              (+ reward 
+                (*  gamma 
+                    (aref q-table next-state (max-action q-table next-state))
+                )))
+    )
+    
+  )
+  (print "Iteration-" iteration)
+  (return-from q-learner q-table)
 )
 
 
@@ -195,8 +213,6 @@
   "Returns a q-table after learning how to play nim"
 
   ;;; IMPLEMENT ME
-  ; a very rough pseudocde! ---
-  ; refer- https://gist.github.com/vo/9045230
   ; do times num iter i
   ;   {
   ;     state=0
@@ -221,6 +237,37 @@
   ;         return
   ;     }
   ;   }
+    (let* ((num-states (+ heap-size 6)) (num-actions heap-size) (q-table (make-q-table num-states num-actions)))  
+      (dotimes (i num-iterations)
+        (let ((state 0) my-action opp-action reward)
+          (loop
+            (let ((current-state state))
+              (if (> (random-elt num-iterations) (random-elt i))
+                (setf my-action (random-elt num-actions))
+                (setf my-action (max-action q-table state))
+              )
+              (setf state (+ state my-action 1))
+              (if (> state heap-size)
+                (setf reward -1) ; we lose
+                (progn 
+                  (setf opp-action (max-action q-table state))
+                  (setf state (+ state opp-action 1))
+                  (if (> state heap-size)
+                    (setf reward 1) ; we win 
+                    (setf reward 0) ; tie
+                  )
+                )
+              )
+              (setf q-table (q-learner q-table reward current-state my-action state gamma alpha-func i))
+              (if (> state heap-size)
+                (return) ; break loop
+              )
+            )
+          )
+        )
+      )
+      (return-from learn-nim q-table)
+    )
   )
 
 
