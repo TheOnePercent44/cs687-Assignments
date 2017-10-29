@@ -175,9 +175,11 @@
 	;ANSON
 	;I'll need to review algorithm pseudocode, but basically update the utility value of the appropriate state-action pair using reward * alpha(?) (and then backprop?) (figure out how next-state, gamma, and iteration are used. Iteration as param for alpha-func I think)
 	;uses (basic-alpha)
-  
-  ;;; IMPLEMENT ME
-)
+  (let ((alpha (funcall alpha-func iteration)))
+	(setf (aref q-table current-state action) 
+	(+ (* (- 1 alpha) (aref q-table current-state action))
+		(* alpha (+ reward (* gamma (max-q q-table next-state))))))
+	q-table))
 
 
 ;; Top-level nim learning algorithm.  The function works roughly like this...
