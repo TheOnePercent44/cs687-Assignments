@@ -171,37 +171,17 @@
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
 
-<<<<<<< HEAD
 	;ANSON
 	;I'll need to review algorithm pseudocode, but basically update the utility value of the appropriate state-action pair using reward * alpha(?) (and then backprop?) (figure out how next-state, gamma, and iteration are used. Iteration as param for alpha-func I think)
 	;uses (basic-alpha)
+	
+  ;;; IMPLEMENT ME
+								  
   (let ((alpha (funcall alpha-func iteration)))
 	(setf (aref q-table current-state action) 
 	(+ (* (- 1 alpha) (aref q-table current-state action))
 		(* alpha (+ reward (* gamma (max-q q-table next-state))))))
 	q-table))
-=======
-  ;;; IMPLEMENT ME
-  ;Q[current-state][action] = (1.0 - alpha) * Q[current_state][action] 
-                                  ;+ alpha * (reward + gamma * Q[next-state][max_action(Q-able,next-state)])
-
-  (setf (aref q-table current-state action) 
-    
-    (+  (* (- 1.0 alpha-func) 
-           (aref q-table current-state action) 
-          )
-          (*  alpha-func 
-              (+ reward 
-                (*  gamma 
-                    (aref q-table next-state (max-action q-table next-state))
-                )))
-    )
-    
-  )
-  (print "Iteration-" iteration)
-  (return-from q-learner q-table)
-)
->>>>>>> origin/master
 
 
 ;; Top-level nim learning algorithm.  The function works roughly like this...
@@ -224,13 +204,10 @@
   "Returns a q-table after learning how to play nim"
 
   ;;; IMPLEMENT ME
-<<<<<<< HEAD
   
   ; SHIKA
   ; a very rough pseudocde! ---
   ; refer- https://gist.github.com/vo/9045230
-=======
->>>>>>> origin/master
   ; do times num iter i
   ;   {
   ;     state=0
@@ -308,40 +285,35 @@
 (defun play-nim (q-table heap-size)
   "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."
   ;;; IMPLEMENT ME
-<<<<<<< HEAD
-  
   ;ANSON
   ;ask-if-user-goes-first, initialize state, update alternatingly with actions from q-table and make-user-move, report winner
   ;uses (make-user-move), (ask-if-user-goes-first)
-  
-=======
   (let ((turn 0) (current-state 0) (user 0) (actions (best-actions q-table)))
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (< current-state heap-size)
         do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (elt actions current-state) 1)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
         do (format t "Sticks remaining: %d\n" (- heap-size current-state))))
->>>>>>> origin/master
-  )
+
 
 ;Anthony!
 ;;Is it just me, or does this seem too easy? It talks in places about a list, and actions is plural... but why would we want a list of actions? just getting the best one should suffice, right? What others would there be? Or is it meant to be a list of actions for all states up to game finish? That's what I'm going to do for now...
-(defun best-actions (q-table)
-  "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
-  ;; hint: see optional value in max-action function
-<<<<<<< HEAD
 
   ;ANSON
   ;mapcar q-table through max-action function with “-” as val parameter
   ;uses (max-action)
+  ;I'm 99% positive that it's meant to be the best action for EACH state, like you said.
+  ;ie [State 0: Action A, State 1: Action B, State 2: Action C...]
+  ;I think it's meant to be used as a way of "printing" the policy set for human reading
   
-=======
+(defun best-actions (q-table)
+  "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
+  ;; hint: see optional value in max-action function
   (let ((current-state (num-states q-table)) bag)
     (dotimes (num-states q-table)
               (push (max-action q-table current-state "-") bag)
               (- current-state 1))
     (print bag))
->>>>>>> origin/master
   ;;; IMPLEMENT ME
   ;too easy? I should think so
   ;Also would require me to either A) add a current-state input parameter to the function or B) have us use a global *current-state* variable. I assume Luke means for the above instead
