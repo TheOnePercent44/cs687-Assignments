@@ -170,18 +170,29 @@
 
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
-
-	;ANSON
+  ;ANSON
 	;I'll need to review algorithm pseudocode, but basically update the utility value of the appropriate state-action pair using reward * alpha(?) (and then backprop?) (figure out how next-state, gamma, and iteration are used. Iteration as param for alpha-func I think)
 	;uses (basic-alpha)
 	
   ;;; IMPLEMENT ME
 								  
   (let ((alpha (funcall alpha-func iteration)))
+    ; (print alpha)
+    (print reward)
+    ; (print next-state)
+    ; (print current-state)
+    ; (print gamma)
+    ; (print iteration)
+    ; (print action)
+    
+
 	(setf (aref q-table current-state action) 
 	(+ (* (- 1 alpha) (aref q-table current-state action))
 		(* alpha (+ reward (* gamma (max-q q-table next-state))))))
-	q-table))
+	q-table)
+
+  ;(print q-table)
+  )
 
 
 ;; Top-level nim learning algorithm.  The function works roughly like this...
@@ -212,10 +223,7 @@
   ;   {
   ;     state=0
   ;     loop{
-  ;       if(randelt(numiter)>randelt(i))
-  ;         myaction=random elt(num-actions)
-  ;       else
-  ;         myaction=best-actions(q,state) ;Shika: use max-action here. I don't think best-actions is intended for this ~AS
+  ;       myaction=best-actions(q,state) ;Shika: use max-action here. I don't think best-actions is intended for this ~AS
   ;       state=state+myaction+1
   ;       if (state >=noof sticks)
   ;         reward =-1
@@ -234,19 +242,17 @@
   ;   }
     (let* ((num-states (+ heap-size 6)) (num-actions heap-size) (q-table (make-q-table num-states num-actions)))  
       (dotimes (i num-iterations)
-        (let ((state 0) my-action opp-action reward)
-          (loop
+        (let ((state 0) my-action opp-action reward )
+          (loop 
             (let ((current-state state))
-              (if (> (random-elt num-iterations) (random-elt i))
-                (setf my-action (random-elt num-actions))
-                (setf my-action (max-action q-table state))
-              )
+              ; (print i)
+              (setf my-action (max-action q-table state))
               (setf state (+ state my-action 1))
               (if (> state heap-size)
                 (setf reward -1) ; we lose
                 (progn 
                   (setf opp-action (max-action q-table state))
-                  (setf state (+ state opp-action 1))
+                  (setf state (+ state opp-action 1))  
                   (if (> state heap-size)
                     (setf reward 1) ; we win 
                     (setf reward 0) ; tie
@@ -293,7 +299,7 @@
   (loop while (< current-state heap-size)
         do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (elt actions current-state) 1)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
-        do (format t "Sticks remaining: %d\n" (- heap-size current-state))))
+        do (format t "Sticks remaining: %d\n" (- heap-size current-state)))))
 
 
 ;Anthony!
