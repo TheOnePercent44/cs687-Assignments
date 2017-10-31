@@ -178,7 +178,7 @@
 								  
   (let ((alpha (funcall alpha-func iteration)))
     ; (print alpha)
-    (print reward)
+    ; (print reward)
     ; (print next-state)
     ; (print current-state)
     ; (print gamma)
@@ -240,20 +240,20 @@
   ;         return
   ;     }
   ;   }
-    (let* ((num-states (+ heap-size 6)) (num-actions heap-size) (q-table (make-q-table num-states num-actions)))  
-      (dotimes (i num-iterations)
+  (let ((q-table (make-q-table (+ heap-size 6) 3)))   
+  (dotimes (i num-iterations)
         (let ((state 0) my-action opp-action reward )
           (loop 
             (let ((current-state state))
               ; (print i)
               (setf my-action (max-action q-table state))
               (setf state (+ state my-action 1))
-              (if (> state heap-size)
+              (if (>= state heap-size)
                 (setf reward -1) ; we lose
                 (progn 
                   (setf opp-action (max-action q-table state))
                   (setf state (+ state opp-action 1))  
-                  (if (> state heap-size)
+                  (if (>= state heap-size)
                     (setf reward 1) ; we win 
                     (setf reward 0) ; tie
                   )
@@ -294,12 +294,13 @@
   ;ANSON
   ;ask-if-user-goes-first, initialize state, update alternatingly with actions from q-table and make-user-move, report winner
   ;uses (make-user-move), (ask-if-user-goes-first)
-  (let ((turn 0) (current-state 0) (user 0) (actions (best-actions q-table)))
+  (let ((turn 0) (current-state 0) (user 0) )
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (< current-state heap-size)
-        do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (elt actions current-state) 1)))))
+        do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (max-action q-table current-state) 1)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
-        do (format t "Sticks remaining: %d\n" (- heap-size current-state)))))
+        do (format t "Sticks remaining: ~d" (- heap-size current-state)))
+  (if (= user 1) "Computer wins!" "Player wins!")))
 
 
 ;Anthony!
@@ -315,11 +316,9 @@
 (defun best-actions (q-table)
   "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
   ;; hint: see optional value in max-action function
-  (let ((current-state (num-states q-table)) bag)
-    (dotimes (num-states q-table)
-              (push (max-action q-table current-state "-") bag)
-              (- current-state 1))
-    (print bag))
+  (let ((state-count (num-states q-table)) (bag))
+    (dotimes (i state-count bag)
+              (push (max-action q-table (- state-count (1+ i)) '-) bag)))
   ;;; IMPLEMENT ME
   ;too easy? I should think so
   ;Also would require me to either A) add a current-state input parameter to the function or B) have us use a global *current-state* variable. I assume Luke means for the above instead
