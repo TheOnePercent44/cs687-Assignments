@@ -45,7 +45,6 @@ is met (see below):
 
 The function should return a list of two items: the final V matrix
 and the final W matrix of the learned network."
-  ;you'll have to do error checking here. Error calculation is in the assignment notes, easy to do. just be mindful of how all the data is represented. It took me an iteration to settle into the lispy way he has set up for us
   )
 
 
