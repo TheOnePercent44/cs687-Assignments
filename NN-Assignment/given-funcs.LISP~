@@ -135,3 +135,48 @@ pretty efficient.  Returns the shuffled version of the list."
 (defun subtract-from-scalar (scalar matrix)
   "Subtracts each element in the matrix from scalar, returning a new matrix"
   (map-m #'(lambda (elt) (- scalar elt)) matrix))
+
+
+;;;; Some useful preprocessing functions
+
+(defun scale-list (lis)
+  "Scales a list so the minimum value is 0.1 and the maximum value is 0.9.  Don't use this function, it's just used by scale-data."
+  (let ((min (reduce #'min lis))
+	(max (reduce #'max lis)))
+    (mapcar (lambda (elt) (+ 0.1 (* 0.8 (/ (- elt min) (- max min)))))
+	    lis)))
+
+(defun scale-data (lis)
+  "Scales all the attributes in a list of samples of the form ((attributes) (outputs))"
+  (transpose (list (transpose (mapcar #'scale-list (transpose (mapcar #'first lis))))
+		   (transpose (mapcar #'scale-list (transpose (mapcar #'second lis)))))))
+
+(defun convert-data (raw-data)
+  "Converts raw data into column-vector data of the form that
+can be fed into NET-LEARN.  Also adds a bias unit of 0.5 to the input."
+  (mapcar #'(lambda (datum)
+	      (mapcar #'(lambda (vec)
+			  (mapcar #'list vec))
+		      (list (cons 0.5 (first datum))
+			    (second datum))))
+	  raw-data))
+
+(defun average (lis)
+  "Computes the average over a list of numbers.  Returns 0 if the list length is 0."
+  (if (= (length lis) 0)
+      0
+      (/ (reduce #'+ lis) (length lis))))
+
+
+
+;; Other fun stuff
+
+(defun optionally-print (x option)
+  "If option is t, then prints x, else doesn't print it.
+In any case, returns x"
+  ;;; perhaps this might be a useful function for you
+  (if option (print x) x))
+
+
+(defparameter *a-good-minimum-error* 1.0e-9)
+
