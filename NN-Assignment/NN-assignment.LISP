@@ -8,10 +8,11 @@
 ;; output and correct-output are both column-vectors
 (defun net-error (output correct-output)
   "Returns (as a scalar value) the error between the output and correct vectors"
-  (* 0.5 (let ((r 0)) 
+  #|(* 0.5 (let ((r 0)) 
            (dotimes (i (length (- output 1)))
              (+ r (power (- (elt output 1 (+ i 1)) (elt correct-output 1 (+ i 1))) 2)))
-           r))
+           r))|#
+  (scalar-multiply 0.5 (multiply (transpose (subtract correct-output output)) (subtract correct-output output)))
   )
 
 ;Anthony
