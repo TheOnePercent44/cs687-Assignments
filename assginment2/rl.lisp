@@ -170,106 +170,34 @@
 
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
-  ;ANSON
-	;I'll need to review algorithm pseudocode, but basically update the utility value of the appropriate state-action pair using reward * alpha(?) (and then backprop?) (figure out how next-state, gamma, and iteration are used. Iteration as param for alpha-func I think)
-	;uses (basic-alpha)
-	
-  ;;; IMPLEMENT ME
-								  
   (let ((alpha (funcall alpha-func iteration)))
-    ; (print alpha)
-    ; (print reward)
-    ; (print next-state)
-    ; (print current-state)
-    ; (print gamma)
-    ; (print iteration)
-    ; (print action)
-    
-
-	(setf (aref q-table current-state action) 
-	(+ (* (- 1 alpha) (aref q-table current-state action))
-		(* alpha (+ reward (* gamma (max-q q-table next-state))))))
-	q-table)
-
-  ;(print q-table)
-  )
-
-
-;; Top-level nim learning algorithm.  The function works roughly like this...
-;;
-;; Make a q table.  Hint: make it 6 states larger than needed.  Can you see why?
-;; Iterations times:
-;;   Set state to 0  (no sticks removed from heap yet)
-;;   Loop:
-;;       old state <- state
-;;       Determine and make my move, update state
-;;       If I lost, set my reward to -1
-;;       Determine and make my opponent's move, update state
-;;       If the opponent lost, set my reward to +1
-;;       If no reward has been set yet, set it to 0
-;;       Update q table with the reward, old-state, my move, and current ("next") state
-;;       If new state is bigger than the heap size, exit loop
-;; Return q table
+    (setf (aref q-table current-state action) 
+          (+ (* (- 1 alpha) (aref q-table current-state action)) ;(1 - alpha) * Q(S, A)
+             (* alpha (+ reward (* gamma (max-q q-table next-state)))))) ;alpha * (reward + gamma * Max-Q(S'))
+    q-table))
 
 (defun learn-nim (heap-size gamma alpha-func num-iterations)
   "Returns a q-table after learning how to play nim"
-
-  ;;; IMPLEMENT ME
-  
-  ; SHIKA
-  ; a very rough pseudocde! ---
-  ; refer- https://gist.github.com/vo/9045230
-  ; do times num iter i
-  ;   {
-  ;     state=0
-  ;     loop{
-  ;       myaction=best-actions(q,state) ;Shika: use max-action here. I don't think best-actions is intended for this ~AS
-  ;       state=state+myaction+1
-  ;       if (state >=noof sticks)
-  ;         reward =-1
-  ;       else
-  ;         opponent plays:
-  ;         oppaction = best-actions(q, state)
-  ;         state=state +oppaction+1
-  ;         if(state >= noofsticks)
-  ;           reward = +1
-  ;         else
-  ;           rewad =0
-  ;       upate q tabele
-  ;       if(state > noofsticks)
-  ;         return
-  ;     }
-  ;   }
+  (if (listp heap-size) (learn-nim-n-heaps heap-size gamma alpha-func num-iterations)
   (let ((q-table (make-q-table (+ heap-size 6) 3)))   
-  (dotimes (i num-iterations)
-        (let ((state 0) my-action opp-action reward )
-          (loop 
-            (let ((current-state state))
-              ; (print i)
-              (setf my-action (max-action q-table state))
-              (setf state (+ state my-action 1))
-              (if (>= state heap-size)
-                (setf reward -1) ; we lose
-                (progn 
-                  (setf opp-action (max-action q-table state))
-                  (setf state (+ state opp-action 1))  
-                  (if (>= state heap-size)
-                    (setf reward 1) ; we win 
-                    (setf reward 0) ; tie
-                  )
-                )
-              )
-              (setf q-table (q-learner q-table reward current-state my-action state gamma alpha-func i))
-              (if (> state heap-size)
-                (return) ; break loop
-              )
-            )
-          )
-        )
-      )
-      (return-from learn-nim q-table)
-    )
-  )
+    (dotimes (i num-iterations)
+      (let ((state 0) my-action opp-action reward )
+        (loop
+          (let ((current-state state))
+            (setf my-action (max-action q-table state))
+            (setf state (+ state my-action 1))
+            (if (>= state heap-size)
+              (setf reward -1)
+              (progn 
+                (setf opp-action (max-action q-table state))
+                (setf state (+ state opp-action 1))  
+                (if (>= state heap-size)
+                  (setf reward 1)
+                  (setf reward 0))))
+            (setf q-table (q-learner q-table reward current-state my-action state gamma alpha-func i))
+            (if (> state heap-size)
+              (return))))))
+    (return-from learn-nim q-table))))
 
 
 
@@ -287,47 +215,109 @@
        (return result))
      (format t "~%Answer must be between 1 and 3"))))
 
-;Anthony Will Do!
 (defun play-nim (q-table heap-size)
-  "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."
-  ;;; IMPLEMENT ME
-  ;ANSON
-  ;ask-if-user-goes-first, initialize state, update alternatingly with actions from q-table and make-user-move, report winner
-  ;uses (make-user-move), (ask-if-user-goes-first)
+  "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."  
+  (if (listp heap-size) (play-nim-n-heaps q-table heap-size)
   (let ((turn 0) (current-state 0) (user 0) )
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (< current-state heap-size)
         do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (max-action q-table current-state) 1)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
         do (format t "Sticks remaining: ~d" (- heap-size current-state)))
-  (if (= user 1) "Computer wins!" "Player wins!")))
+  (if (= user 1) "Computer wins!" "Player wins!"))))
 
-
-;Anthony!
-;;Is it just me, or does this seem too easy? It talks in places about a list, and actions is plural... but why would we want a list of actions? just getting the best one should suffice, right? What others would there be? Or is it meant to be a list of actions for all states up to game finish? That's what I'm going to do for now...
-
-  ;ANSON
-  ;mapcar q-table through max-action function with “-” as val parameter
-  ;uses (max-action)
-  ;I'm 99% positive that it's meant to be the best action for EACH state, like you said.
-  ;ie [State 0: Action A, State 1: Action B, State 2: Action C...]
-  ;I think it's meant to be used as a way of "printing" the policy set for human reading
-  
 (defun best-actions (q-table)
   "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
-  ;; hint: see optional value in max-action function
   (let ((state-count (num-states q-table)) (bag))
     (dotimes (i state-count bag)
-              (push (max-action q-table (- state-count (1+ i)) '-) bag)))
-  ;;; IMPLEMENT ME
-  ;too easy? I should think so
-  ;Also would require me to either A) add a current-state input parameter to the function or B) have us use a global *current-state* variable. I assume Luke means for the above instead
-  ;(max-action q-table *current-state* "-")
-  )
+              (push (max-action q-table (- state-count (1+ i)) '-) bag))))
 
 
+(defun learn-nim-n-heaps (heap-sizes gamma alpha-func num-iterations)
+  (let ((q-table (make-q-table (1+ (list-to-state (make-list (length heap-sizes) :initial-element -5) heap-sizes)) (* 3 (length heap-sizes)))))
+    (dotimes (i num-iterations q-table)
+      (let ((state 0) my-action opp-action reward)
+        (loop
+          (let ((current-state state))
+            (print (list state my-action opp-action))
+            (setf my-action (max-action q-table state))
+            (setf state (take-action-raw state my-action heap-sizes))
+            (if (game-over-raw state heap-sizes)
+              (setf reward -1)
+              (progn 
+                (setf opp-action (max-action q-table state))
+                (setf state (take-action-raw state opp-action heap-sizes))
+                (if (game-over-raw state heap-sizes)
+                  (setf reward 1)
+                  (setf reward 0))))
+            (setf q-table (q-learner q-table reward current-state my-action state gamma alpha-func i))
+            (if (game-over-raw state heap-sizes)
+              (return))))))))
 
+(defun take-action-raw (state action heap-sizes)
+  (list-to-state (take-action (state-to-list state heap-sizes) action) heap-sizes))
 
+(defun take-action (list-state action)
+  (decf (elt list-state (floor action 3)) (1+ (mod action 3)))
+  (print list-state))
+
+(defun play-nim-n-heaps (q-table heap-sizes)
+  (let ((turn 0) (current-state (make-list (length heap-sizes) :initial-element 0)) (user 0))
+  (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
+  (loop while (not (game-over current-state))
+        do (if (= turn user) 
+             (setf current-state (take-action current-state (player-n-heaps-move current-state heap-sizes))) 
+             (setf current-state (take-action current-state (max-action q-table current-state))))
+        do (if (= turn 0) (setf turn 1) (setf turn 0))
+        do (format t "Sticks remaining: ~d" current-state)
+  (if (= user 1) "Computer wins!" "Player wins!"))))
+
+(defun game-over-raw (state heap-sizes)
+  (game-over (state-to-list state heap-sizes)))
+
+(defun game-over (list-state)
+  (dolist (x list-state t)
+    (if (> x 0) (return nil))))
+
+(defun player-n-heaps-move (state heap-sizes)
+  (let ((pile) (quantity))
+    (loop
+     (format t "~%Take sticks from which pile? (piles 1 to ~d)" (length heap-sizes))
+     (setf pile (read))
+     (if (and (numberp pile) (<= pile (length heap-sizes)) (>= pile 1) (> (elt state pile) 0))
+       (progn
+         (format t "~%Take how many sticks?  ")
+         (setf quantity (read))
+         (when (and (numberp quantity) (<= quantity 3) (>= quantity 1))
+           (return (+ (* 3 pile) quantity))
+         (format t "~%Answer must be between 1 and 3"))
+       (format t "~%Answer must be between 1 and ~d, pile must not be empty" (length heap-sizes)))))))
+
+(defun best-actions-n-heaps (q-table heap-sizes)  
+  (let ((state-count (num-states q-table)) (bag))
+    (dotimes (i state-count bag)
+      (push (list 
+             (state-to-list (- state-count (1+ i)) heap-sizes)
+             (max-action q-table (- state-count (1+ i)) '-))
+      bag))))
+
+(defun state-to-list (state heap-sizes)
+  (let ((list-state ()))
+    (dolist (x heap-sizes (reverse list-state))
+      (push (- x (mod state (+ 6 x))) list-state)
+      (setf state (floor state (+ 6 x))))))
+
+(defun list-to-state (list-state heap-sizes)
+  (let ((state 0) (sum 1) (len (length heap-sizes)))
+    (dotimes (x len state)
+      (incf state (* (- (elt heap-sizes x) (elt list-state x)) sum))
+      (setf sum (* sum (+ (elt heap-sizes x) 6))))))
+    
+(defun test-lts ()
+  (dotimes (x 9) (dotimes (y 9) (dotimes (z 9) (print (list-to-state (print (list (- 3 x) (- 3 y) (- 3 z))) '(3 3 3)))))))
+
+(defun test-stlts ()
+  (dotimes (x 990) (print "")(print (list-to-state (print (state-to-list (print x) '(3 4 5))) '(3 4 5)))))
 ;; example:
 ;; 
 ;; (setq *my-q-table* (learn-nim 22 0.1 #'basic-alpha 50000))
