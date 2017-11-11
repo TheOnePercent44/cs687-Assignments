@@ -168,6 +168,21 @@
   (declare (ignore iteration)) ;; quiets compiler complaints
   *basic-alpha*)
 
+(defparameter *easy-alpha* 0.5 "A simple alpha constant")
+(defun basic-alpha (iteration)
+  (declare (ignore iteration)) ;; quiets compiler complaints
+  *basic-alpha*)
+
+(defparameter *medium-alpha* 0.5 "A simple alpha constant")
+(defun basic-alpha (iteration)
+  (declare (ignore iteration)) ;; quiets compiler complaints
+  *basic-alpha*)
+
+(defparameter *hard-alpha* 0.5 "A simple alpha constant")
+(defun basic-alpha (iteration)
+  (declare (ignore iteration)) ;; quiets compiler complaints
+  *basic-alpha*)
+
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
   (let ((alpha (funcall alpha-func iteration)))
@@ -234,12 +249,11 @@
 
 
 (defun learn-nim-n-heaps (heap-sizes gamma alpha-func num-iterations)
-  (let ((q-table (make-q-table (1+ (list-to-state (make-list (length heap-sizes) :initial-element -5) heap-sizes)) (* 3 (length heap-sizes)))))
+  (let ((q-table (ban-actions (make-q-table (1+ (list-to-state (make-list (length heap-sizes) :initial-element -5) heap-sizes)) (* 3 (length heap-sizes))) heap-sizes)))
     (dotimes (i num-iterations q-table)
       (let ((state 0) my-action opp-action reward)
         (loop
           (let ((current-state state))
-            (print (list state my-action opp-action))
             (setf my-action (max-action q-table state))
             (setf state (take-action-raw state my-action heap-sizes))
             (if (game-over-raw state heap-sizes)
@@ -254,23 +268,32 @@
             (if (game-over-raw state heap-sizes)
               (return))))))))
 
+(defun ban-actions (q-table heap-sizes)
+  (dotimes (state (num-states q-table) q-table)
+    (dotimes (heap (length heap-sizes))
+      (when (<= (elt (state-to-list state heap-sizes) heap) 0)
+          (progn
+            (setf (aref q-table state (* 3 heap)) -99999999999)
+            (setf (aref q-table state (1+ (* 3 heap))) -99999999999)
+            (setf (aref q-table state (+ 2 (* 3 heap))) -99999999999))))))
+
 (defun take-action-raw (state action heap-sizes)
   (list-to-state (take-action (state-to-list state heap-sizes) action) heap-sizes))
 
 (defun take-action (list-state action)
   (decf (elt list-state (floor action 3)) (1+ (mod action 3)))
-  (print list-state))
+  list-state)
 
 (defun play-nim-n-heaps (q-table heap-sizes)
-  (let ((turn 0) (current-state (make-list (length heap-sizes) :initial-element 0)) (user 0))
+  (let ((turn 0) (current-state heap-sizes) (user 0))
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (not (game-over current-state))
         do (if (= turn user) 
              (setf current-state (take-action current-state (player-n-heaps-move current-state heap-sizes))) 
-             (setf current-state (take-action current-state (max-action q-table current-state))))
+             (setf current-state (take-action current-state (max-action q-table (list-to-state current-state heap-sizes)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
-        do (format t "Sticks remaining: ~d" current-state)
-  (if (= user 1) "Computer wins!" "Player wins!"))))
+        do (format t "Sticks remaining: ~d" current-state))
+  (if (= user 1) "Computer wins!" "Player wins!")))
 
 (defun game-over-raw (state heap-sizes)
   (game-over (state-to-list state heap-sizes)))
@@ -284,12 +307,12 @@
     (loop
      (format t "~%Take sticks from which pile? (piles 1 to ~d)" (length heap-sizes))
      (setf pile (read))
-     (if (and (numberp pile) (<= pile (length heap-sizes)) (>= pile 1) (> (elt state pile) 0))
+     (if (and (numberp pile) (<= pile (length heap-sizes)) (>= pile 1) (> (elt state (1- pile)) 0))
        (progn
          (format t "~%Take how many sticks?  ")
          (setf quantity (read))
          (when (and (numberp quantity) (<= quantity 3) (>= quantity 1))
-           (return (+ (* 3 pile) quantity))
+           (return (+ (* 3 (1- pile)) (1- quantity)))
          (format t "~%Answer must be between 1 and 3"))
        (format t "~%Answer must be between 1 and ~d, pile must not be empty" (length heap-sizes)))))))
 
