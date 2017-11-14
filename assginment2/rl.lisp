@@ -168,21 +168,6 @@
   (declare (ignore iteration)) ;; quiets compiler complaints
   *basic-alpha*)
 
-(defparameter *easy-alpha* 0.5 "A simple alpha constant")
-(defun basic-alpha (iteration)
-  (declare (ignore iteration)) ;; quiets compiler complaints
-  *basic-alpha*)
-
-(defparameter *medium-alpha* 0.5 "A simple alpha constant")
-(defun basic-alpha (iteration)
-  (declare (ignore iteration)) ;; quiets compiler complaints
-  *basic-alpha*)
-
-(defparameter *hard-alpha* 0.5 "A simple alpha constant")
-(defun basic-alpha (iteration)
-  (declare (ignore iteration)) ;; quiets compiler complaints
-  *basic-alpha*)
-
 (defun q-learner (q-table reward current-state action next-state gamma alpha-func iteration)
   "Modifies the q-table and returns it.  alpha-func is a function which must be called to provide the current alpha value."
   (let ((alpha (funcall alpha-func iteration)))
@@ -213,8 +198,6 @@
             (if (> state heap-size)
               (return))))))
     (return-from learn-nim q-table))))
-
-
 
 (defun ask-if-user-goes-first ()
   "Returns true if the user wants to go first"
@@ -248,7 +231,62 @@
               (push (max-action q-table (- state-count (1+ i)) '-) bag))))
 
 
-(defun learn-nim-n-heaps (heap-sizes gamma alpha-func num-iterations)
+;----------------end of original assignment---------------------------
+;below are additional functions added, including other alpha functions, as well as functionality for multi-heap nim, and nim with different maximums for "sticks taken per turn", including the option to have different maximums for different piles.
+
+
+(defun learn-nim-plus (heaps gamma alpha-func num-iterations)
+;heaps argument can be in one of four formats:
+;x - single heap of size x, up to 3 sticks per turn
+;(x1 x2 x3 ... xn) - n heaps of sizes x1, x2, x3 ... xn, up to 3 sticks per turn
+;((x1 x2 ... xn) y) - n heaps of sizes x1, x2 ... xn, up to y sticks per turn
+;((x1 x2 ... xn) (y1 y2 ... yn)) - n heaps of sizes x1, x2 ... xn, up to y1 sticks from x1, y2 from x2, ... or yn from xn per turn
+  (let*
+    (heap-sizes (if (listp heaps) (if (listp (first heaps)) (first heaps) heaps) (list heaps)))
+    (heap-actions (if (and (listp heaps) (listp (first heaps))) (if (listp (second heaps)) (second heaps) (list (second heaps))) '(3)))
+    (q-table (make-q-table-plus heap-sizes heap-actions))
+    (dotimes (i num-iterations q-table)
+      (let ((state heap-sizes) my-action opp-action reward)
+        (loop
+         (let ((current-state state))
+           (setf my-action (max-action-plus q-table state))
+           (setf state (get-next-state state my-action heap-sizes heap-sizes heap-actions))
+           (if (game-over state)
+             (setf reward -1)
+             (progn
+               (setf opp-action (max-action-plus q-table state heap-sizes heap-actions))
+               (setf state (get-next-state state opp-action))
+               (if (game-over state)
+                 (setf reward 1)
+                 (setf reward 0))
+             
+
+(defun state (state)
+  (sort state #'>))
+
+(defun state-to-index (state q-sizes)
+  "Converts a list of heap sizes into a lookup index for a q-table with the starting heaps provided. Works opposite to index-to-state"
+)
+
+(defun index-to-state (index q-sizes)
+  "Converts a lookup index for a q-table with the starting heaps provided into a list of heap sizes. Works opposite to state-to-index"
+)
+
+(defun max-action-plus (q-table state q-sizes q-actions)
+  "Returns the LEGAL action with the highest value available from the given state according to the provided q-table, in the form of a list"
+)
+
+(defun get-next-state (state action)
+  "Returns the state that results from the chosen action"
+)
+
+(defun game-over (state)
+  "Returns whether the game is over or not (in other words, if all of the piles are empty)"
+)
+ 
+
+
+(defun learn-nim-minus (heap-sizes gamma alpha-func num-iterations)
   (let ((q-table (ban-actions (make-q-table (1+ (list-to-state (make-list (length heap-sizes) :initial-element -5) heap-sizes)) (* 3 (length heap-sizes))) heap-sizes)))
     (dotimes (i num-iterations q-table)
       (let ((state 0) my-action opp-action reward)
@@ -272,10 +310,8 @@
   (dotimes (state (num-states q-table) q-table)
     (dotimes (heap (length heap-sizes))
       (when (<= (elt (state-to-list state heap-sizes) heap) 0)
-          (progn
-            (setf (aref q-table state (* 3 heap)) -99999999999)
-            (setf (aref q-table state (1+ (* 3 heap))) -99999999999)
-            (setf (aref q-table state (+ 2 (* 3 heap))) -99999999999))))))
+        (dotimes (x 3)
+          (setf (aref q-table state (+ x (* 3 heap))) 1))))))
 
 (defun take-action-raw (state action heap-sizes)
   (list-to-state (take-action (state-to-list state heap-sizes) action) heap-sizes))
@@ -284,7 +320,7 @@
   (decf (elt list-state (floor action 3)) (1+ (mod action 3)))
   list-state)
 
-(defun play-nim-n-heaps (q-table heap-sizes)
+(defun play-nim-minus (q-table heap-sizes)
   (let ((turn 0) (current-state heap-sizes) (user 0))
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (not (game-over current-state))
@@ -302,7 +338,7 @@
   (dolist (x list-state t)
     (if (> x 0) (return nil))))
 
-(defun player-n-heaps-move (state heap-sizes)
+(defun player-move-minus (state heap-sizes)
   (let ((pile) (quantity))
     (loop
      (format t "~%Take sticks from which pile? (piles 1 to ~d)" (length heap-sizes))
@@ -316,7 +352,7 @@
          (format t "~%Answer must be between 1 and 3"))
        (format t "~%Answer must be between 1 and ~d, pile must not be empty" (length heap-sizes)))))))
 
-(defun best-actions-n-heaps (q-table heap-sizes)  
+(defun best-actions-minus (q-table heap-sizes)  
   (let ((state-count (num-states q-table)) (bag))
     (dotimes (i state-count bag)
       (push (list 
@@ -341,17 +377,4 @@
 
 (defun test-stlts ()
   (dotimes (x 990) (print "")(print (list-to-state (print (state-to-list (print x) '(3 4 5))) '(3 4 5)))))
-;; example:
-;; 
-;; (setq *my-q-table* (learn-nim 22 0.1 #'basic-alpha 50000))
-;;
-;; to get the policy from this table:
-;;
-;; (best-actions *my-q-table*)
-;;
-;; to play a game of your brain versus this q-table:
-;;
-;; (play-nim *my-q-table* 22)   ;; need to provide the original heap size
-;;
-;; You might try changing to some other function than #'basic-alpha...
 
