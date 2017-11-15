@@ -45,6 +45,28 @@ is met (see below):
 
 The function should return a list of two items: the final V matrix
 and the final W matrix of the learned network."
+  (let ((v (make-random-matrix num-hidden-units (1+ (length (first (first data)))) initial-bounds))
+	  (w (make-random-matrix (length (first (last (first data)))) num-hidden-units initial-bounds)))
+	(dotimes (i max-iterations)
+	  (let ((converted-data (shuffle (convert-data data))))
+	    (dolist (datum converted-data)
+	      (if (and (eql 0 (mod i modulo)) (not (eql 0 i)))
+		  (progn
+		    (let ((e '()))
+		      (dolist (j converted-data)
+			(setf e (append e (net-error (forward-propagate j v w) (first (last j))))))
+		      (if (eql t print-all-errors)
+			  (print e)
+			  (progn
+			    (let ((max (reduce #'max (mapcar #'first e))) (mean (average (mapcar #'first e))))
+			      (format t "Worse error: ~A,Mean error: ~A~%" max mean)
+			      (if (< max *a-good-minimum-error*)
+				  (return-from net-build (list v w)))))))))
+	      (progn
+		(let ((temp (back-propagate datum alpha v w)))
+		  (setf v (first temp))
+		  (setf w (second temp)))))))
+(list v w))
   )
 
 
@@ -53,6 +75,11 @@ and the final W matrix of the learned network."
 of the data, then tests generalization on the second half, returning
 the average error among the samples in the second half.  Don't print any errors,
 and use a modulo of MAX-ITERATIONS."
+(let* ((data-count (length data)) (train-data (subseq data 0 (floor (/ data-count 2)))) (test-data (subseq data (ceiling (/ data-count 2))))
+	 (weights (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) (e '()))
+    (dolist (i (convert-data test-data))
+      (setf e (append e (net-error (forward-propagate i (first weights) (second weights)) (first (last i))))))
+(average (mapcar #'first e)))
   )
 
 ;;;Datum is of the form (input-vector expected-output-vector)
