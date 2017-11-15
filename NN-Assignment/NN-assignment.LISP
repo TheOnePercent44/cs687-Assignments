@@ -102,7 +102,7 @@
       			(forward-propagate i (first weights) (second weights)) 
       			(first (last i)))))
     )
-	(average (mapcar #'first e))
+	(average (mapcar #'first err))
 )
 )
 
