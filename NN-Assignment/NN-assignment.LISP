@@ -25,35 +25,86 @@
     r))
 
 
+(defun get-io-sizes (data)
+	(list 
+		(length (first (first data))) 
+		(length (second (first data))))
+)
+
+
 (defun net-build (data num-hidden-units alpha initial-bounds max-iterations modulo &optional print-all-errors)
-  "Builds a neural network with num-hidden-units and the appropriate number
-of input and output units based on the data.  Each element should be a random
-value between -(INITIAL-BOUNDS) and +(INITIAL-BOUNDS).
+  "Builds a neural network with num-hidden-units and the appropriate number"
+; of input and output units based on the data.  Each element should be a random
+; value between -(INITIAL-BOUNDS) and +(INITIAL-BOUNDS).
 
-Then performs the following loop MAX-ITERATIONS times, or until the error condition
-is met (see below):
+; Then performs the following loop MAX-ITERATIONS times, or until the error condition
+; is met (see below):
 
-   1. For each data element in a randomized version of the data, perform
-      backpropagation.
-   2. Every modulo iterations,
-          For every data element in the data, perform forward propagation and
-          A.  If print-all-errors is true, then print the error for each element
-          B.  At any rate, always print the worst error and the mean error
-          C.  If the worst error is better (lower) than A-GOOD-MINIMUM-ERROR,
-              quit all loops and prepare to exit the function --
-              the error condition was met.
+;    1. For each data element in a randomized version of the data, perform
+;       backpropagation.
+;    2. Every modulo iterations,
+;           For every data element in the data, perform forward propagation and
+;           A.  If print-all-errors is true, then print the error for each element
+;           B.  At any rate, always print the worst error and the mean error
+;           C.  If the worst error is better (lower) than A-GOOD-MINIMUM-ERROR,
+;               quit all loops and prepare to exit the function --
+;               the error condition was met.
 
-The function should return a list of two items: the final V matrix
-and the final W matrix of the learned network."
-  )
+; The function should return a list of two items: the final V matrix
+; and the final W matrix of the learned network."
+(let* (
+	(io-size (get-io-sizes data))
+	(v (make-random-matrix num-hidden-units (1+ (first io-size)) initial-bounds))
+	(w (make-random-matrix (second io-size) num-hidden-units initial-bounds)))
+		(dotimes (i max-iterations)
+			(let ((converted-data (shuffle (convert-data data))))
+				(dolist (datum converted-data)
+					(if (and (eql 0 (mod i modulo)) (not (eql 0 i))) ; i is mod and starts from 1 -  forward prop
+						(progn
+							(let ((err '()))
+								(dolist (j converted-data)
+									(setf err (append err (net-error (forward-propagate j v w) (first (last j))))))
+								(if (eql t print-all-errors)
+									(print err)
+									(progn
+										(let ((w-err (reduce #'max (mapcar #'first err))) (m-err (average (mapcar #'first err))))
+											(format t "Worse error: ~A,Mean error: ~A~%" w-err m-err)
+											(if (< w-err *a-good-minimum-error*)
+												(return-from net-build (list v w))))
+									)
+								)
+							)
+						)
+					)
+					(progn ; backprop for all iterations
+						(let ((temp (back-propagate datum alpha v w)))
+							(setf v (first temp))
+							(setf w (second temp)))))))
+	(list v w)
+))
 
 
 (defun simple-generalization (data num-hidden-units alpha initial-bounds max-iterations)
-  "Given a set of data, trains a neural network on the first half
-of the data, then tests generalization on the second half, returning
-the average error among the samples in the second half.  Don't print any errors,
-and use a modulo of MAX-ITERATIONS."
-  )
+  "Given a set of data, trains a neural network on the first half"
+; of the data, then tests generalization on the second half, returning
+; the average error among the samples in the second half.  Don't print any errors,
+; and use a modulo of MAX-ITERATIONS."
+(let* 
+		((data-size (length data)) 
+		(train-data (subseq data 0 (floor (/ data-size 2)))) 
+		(test-data (subseq data (ceiling (/ data-size 2))))
+		(net (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) 
+		(err '()))
+    (dolist (i (convert-data test-data))
+      (setf err 
+      	(append err 
+      		(net-error 
+      			(forward-propagate i (first net) (second net)) 
+      			(first (last i)))))
+    )
+	(average (mapcar #'first err))
+)
+)
 
 ;;;Datum is of the form (input-vector expected-output-vector)
 ;Anthony
