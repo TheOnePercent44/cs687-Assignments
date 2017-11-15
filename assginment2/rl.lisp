@@ -258,10 +258,12 @@
                (setf state (get-next-state state opp-action))
                (if (game-over state)
                  (setf reward 1)
-                 (setf reward 0))
+                 (setf reward 0))))
+           (setf q-table (q-learner-plus q-table heap-sizes heap-actions reward current-state my-action state gamma alpha-func i))
+           (if (game-over state) (return))))))))
              
 
-(defun state (state)
+(defun order-state (state)
   (sort state #'>))
 
 (defun state-to-index (state q-sizes)
