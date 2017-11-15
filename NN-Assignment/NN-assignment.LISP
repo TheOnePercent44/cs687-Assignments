@@ -59,7 +59,7 @@
 		(dotimes (i max-iterations)
 			(let ((converted-data (shuffle (convert-data data))))
 				(dolist (datum converted-data)
-					(if (and (eql 0 (mod i modulo)) (not (eql 0 i))) ; i is mod and starts from 1
+					(if (and (eql 0 (mod i modulo)) (not (eql 0 i))) ; i is mod and starts from 1 -  forward prop
 						(progn
 							(let ((err '()))
 								(dolist (j converted-data)
@@ -76,7 +76,7 @@
 							)
 						)
 					)
-					(progn
+					(progn ; backprop for all iterations
 						(let ((temp (back-propagate datum alpha v w)))
 							(setf v (first temp))
 							(setf w (second temp)))))))
@@ -90,16 +90,16 @@
 ; the average error among the samples in the second half.  Don't print any errors,
 ; and use a modulo of MAX-ITERATIONS."
 (let* 
-		((data-count (length data)) 
-		(train-data (subseq data 0 (floor (/ data-count 2)))) 
-		(test-data (subseq data (ceiling (/ data-count 2))))
-		(weights (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) 
+		((data-size (length data)) 
+		(train-data (subseq data 0 (floor (/ data-size 2)))) 
+		(test-data (subseq data (ceiling (/ data-size 2))))
+		(net (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) 
 		(err '()))
     (dolist (i (convert-data test-data))
       (setf err 
       	(append err 
       		(net-error 
-      			(forward-propagate i (first weights) (second weights)) 
+      			(forward-propagate i (first net) (second net)) 
       			(first (last i)))))
     )
 	(average (mapcar #'first err))
