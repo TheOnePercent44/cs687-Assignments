@@ -54,10 +54,10 @@
 ; and the final W matrix of the learned network."
 (let* (
 	(io-size (get-io-sizes data))
-	(v (make-random-matrix num-hidden-units (1+ (first io-size)) initial-bounds))
+	(v (make-random-matrix num-hidden-units (first io-size) initial-bounds)) ;don't do 1+(first iosize) - we just want (first iosize)
 	(w (make-random-matrix (second io-size) num-hidden-units initial-bounds)))
 		(dotimes (i max-iterations)
-			(let ((converted-data (shuffle (convert-data data))))
+			(let ((converted-data (shuffle data))) ;don't convert data here. We can convert-data as we submit requests (see run examples below)
 				(dolist (datum converted-data)
 					(if (and (eql 0 (mod i modulo)) (not (eql 0 i))) ; i is mod and starts from 1 -  forward prop
 						(progn
