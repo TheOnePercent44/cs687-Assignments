@@ -189,7 +189,25 @@ POP-SIZE, using various functions"
   ;; and any other statistics you think might be nifty.
 
     ;;; IMPLEMENT ME
+    
+    ;;for pop-size times:
+    ;;~Create random individual and add to population P (CREATOR)
+    ;;print best from initial population (given function above)
 
+    ;;while (converging? num iterations?):
+    ;;~for all individuals in population
+    ;;~~assess and store fitness (EVALUATOR)
+    ;;~~if best fitness so far, store
+    ;;~Initialize empty next generation Q
+    ;;~for pop-size/2 times:
+    ;;~~select two random parents with replacement (tourney select twice; SELECTOR)
+    ;;~~Create two children via crossover (MODIFIER)
+    ;;~~randomly mutate children (also in MODIFIER- this step is included in the above)
+    ;;~~add children to Q
+    ;;~replace P with Q
+    ;;~print best of generation P (given func above)
+    
+    ;;return Best of last generation P
   )
 
 
