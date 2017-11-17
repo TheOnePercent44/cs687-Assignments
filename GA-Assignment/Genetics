@@ -129,20 +129,22 @@ new slot is created).  EQUALP is the test used for duplicates."
 (defun tournament-select-one (population fitnesses)
   "Does one tournament selection and returns the selected individual."
   (let* ((r (random (length population))) (best-i r) (best-fit (elt fitnesses r)) next)
-    (loop for i from 2 to *tournament-size*
-          do (setf r (random (length population)))
-          do (setf next-fit (elt fitnesses r))
-          do (if (> next-fit best-fit) (progn (setf best-fit (elt fitnesses r)) (setf best-i r)) nil))
+    (dotimes (i *tournament-size* t)
+      (setf r (random (length population)))
+      (setf next (elt fitnesses r))
+      (if (> next best-fit) (progn (setf best-fit (elt fitnesses r)) (setf best-i r)) nil))
     (elt population best-i))
   ;;; IMPLEMENT ME  
   )
 
 
-
+;Anthony
 (defun tournament-selector (num population fitnesses)
   "Does NUM tournament selections, and puts them all in a list"
-
-    ;;; IMPLEMENT ME
+  (let (gathered)
+    (loop for i from 1 to num
+          collect (tournament-select-one population fitnesses)))
+  ;;; IMPLEMENT ME
   )
 
 
