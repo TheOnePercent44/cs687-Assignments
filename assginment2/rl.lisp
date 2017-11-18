@@ -178,7 +178,7 @@
 
 (defun learn-nim (heap-size gamma alpha-func num-iterations)
   "Returns a q-table after learning how to play nim"
-  (if (listp heap-size) (learn-nim-n-heaps heap-size gamma alpha-func num-iterations)
+  (if (listp heap-size) (learn-nim-plus heap-size gamma alpha-func num-iterations)
   (let ((q-table (make-q-table (+ heap-size 6) 3)))   
     (dotimes (i num-iterations)
       (let ((state 0) my-action opp-action reward )
@@ -215,14 +215,14 @@
 
 (defun play-nim (q-table heap-size)
   "Plays a game of nim.  Asks if the user wants to play first,then has the user play back and forth with the game until one of them wins.  Reports the winner."  
-  (if (listp heap-size) (play-nim-n-heaps q-table heap-size)
+  (if (listp heap-size) (play-nim-plus q-table heap-size)
   (let ((turn 0) (current-state 0) (user 0) )
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
   (loop while (< current-state heap-size)
         do (if (= turn user) (setf current-state (+ current-state (make-user-move))) (setf current-state (+ current-state (print (+ (max-action q-table current-state) 1)))))
         do (if (= turn 0) (setf turn 1) (setf turn 0))
         do (format t "Sticks remaining: ~d" (- heap-size current-state)))
-  (if (= user 1) "Computer wins!" "Player wins!"))))
+  (if (= turn user) "Player wins!" "Computer wins!"))))
 
 (defun best-actions (q-table)
   "Returns a list of the best actions.  If there is no best action, this is indicated with a hyphen (-)"
@@ -242,16 +242,15 @@ x - single heap of size x, up to 3 sticks per turn
 (x1 x2 x3 ... xn) - n heaps of sizes x1, x2, x3 ... xn, up to 3 sticks per turn
 ((x1 x2 ... xn) y) - n heaps of sizes x1, x2 ... xn, up to y sticks per turn
 ((x1 x2 ... xn) (y1 y2 ... yn)) - n heaps of sizes x1, x2 ... xn, up to y1 sticks from x1, y2 from x2, ... or yn from xn per turn"
-  (let*
-    (heap-sizes (if (listp heaps) (if (listp (first heaps)) (first heaps) heaps) (list heaps)))
-    (heap-actions (if (and (listp heaps) (listp (first heaps))) (if (listp (second heaps)) (second heaps) (list (second heaps))) '(3)))
-    (q-table (make-q-table-plus heap-sizes heap-actions))
+  (let
+    ((heap-sizes (get-heaps-sizes heaps)) (heap-actions (get-heaps-actions heaps))
+    (q-table (make-q-table-plus (get-heaps-sizes heaps) (get-heaps-actions heaps))))
     (dotimes (i num-iterations q-table)
       (let ((state heap-sizes) my-action opp-action reward)
         (loop
          (let ((current-state state))
-           (setf my-action (max-action-plus q-table state))
-           (setf state (get-next-state state my-action heap-sizes heap-sizes heap-actions))
+           (setf my-action (max-action-plus q-table state heap-sizes heap-actions))
+           (setf state (get-next-state state my-action))
            (if (game-over state)
              (setf reward -1)
              (progn
@@ -262,59 +261,160 @@ x - single heap of size x, up to 3 sticks per turn
                  (setf reward 0))))
            (setf q-table (q-learner-plus q-table heap-sizes heap-actions reward current-state my-action state gamma alpha-func i))
            (if (game-over state) (return))))))))
-             
-(defun q-learner-plus (q-table q-sizes q-actions reward current-state action next-state gamma alpha-func iteration)
-  "Modifies the q-table to incorporate the feedback from the provided action sequence"
-)
 
 (defun order-state (state)
   "Converts a state to be in 'proper' order (descending magnitude)
 Used to collapse redundant states"
   (sort state #'>))
 
-(defun get-heaps-size (heaps)
+(defun get-heaps-sizes (heaps)
   "Returns the heap sizes of the 'heaps' argument"
-)
+  (sort (if (listp heaps) (if (listp (first heaps)) (first heaps) heaps) (list heaps)) #'>))
 
 (defun get-heaps-actions (heaps)
   "Returns the heap actions of the 'heaps' argument"
-)
+  (if (and (listp heaps) (listp (first heaps))) 
+    (if (listp (second heaps)) (second heaps) (make-list (length (first heaps)) :initial-element (second heaps))) 
+    (make-list (if (listp heaps) (length heaps) 1) :initial-element 3)))
 
 (defun state-to-index (state q-sizes)
   "Converts a list of heap sizes into a lookup index for a q-table with the starting heaps provided. Works opposite to index-to-state"
-)
+  (reduce #'+ (mapcar #'* (get-size-scalars q-sizes) state)))
 
 (defun index-to-state (index q-sizes)
   "Converts a lookup index for a q-table with the starting heaps provided into a list of heap sizes. Works opposite to state-to-index"
-)
+  (mapcar (lambda (x)
+            (let ((modulo 0))
+              (loop while (>= index x)
+                    do (decf index x)
+                    do (incf modulo))
+              modulo))
+          (get-size-scalars q-sizes)))
 
-(defun max-action-plus (q-table state q-sizes q-actions)
-  "Returns the LEGAL action with the highest value available from the given state according to the provided q-table, in the form of a list"
-)
+(defun get-size-scalars (q-sizes)
+  "Returns the scale values needed to convert between state and index"
+  (let ((product 1) scalar)
+    (dolist (x (reverse (sort q-sizes #'>)) scalar)
+      (push product scalar)
+      (setf product (* product (1+ x))))))
+
+(defun index-to-action (index q-actions)
+  "Returns the action with the given index, according to q-actions. Works opposite to action-to-index"
+  (incf index)
+  (reverse (mapcar 
+   (lambda (x) 
+     (let ((val (if (and (> index 0) (>= x index)) index 0)))
+       (decf index x)
+       val))
+   (reverse q-actions))))
+
+(defun action-to-index (action q-actions)
+  "Returns the index of the given action, according to q-actions. Works opposite to index-to-action"
+  (let ((val 0))
+    (reduce #'+ (mapcar (lambda (x) (if (not (= 0 x)) (setf val action) (if (not (= 0 val)) (setf val (+ 1 x)))) val) q-actions))))
+
+(defun max-q-plus (q-table state q-sizes q-actions)
+  "Returns the highest value for any LEGAL action available from the given state according the provided q-table. Returns nil if there are no legal moves"
+  (let ((best) (num-actions (reduce #'+ q-actions)) (index (state-to-index state q-sizes)) (next-action))
+    (dotimes (action num-actions best)
+      (setf next-action (aref q-table index action))
+      (setf best (if (not best) next-action (if (not next-action) best (max best next-action)))))))
+
+(defun max-action-plus (q-table state q-sizes q-actions &optional val)
+  "Returns the LEGAL action with the highest value available from the given state according to the provided q-table, in the form of a list. If var is specified, it will be returned in the case of a tie. Otherwise, it will return one of the highest valued actions at random. If there are no legal moves, a random one is returned if val is not specified."
+  (let ((num-actions (reduce #'+ q-actions)) (best (max-q-plus q-table state q-sizes q-actions)) (bag))
+    (dotimes (action num-actions)
+      (when (= (aref q-table state action) best)
+        (push action bag)))
+    (if (and val (rest bag))
+        val
+      (index-to-state (random-elt bag) q-sizes))))
 
 (defun get-next-state (state action)
   "Returns the state that results from the chosen action"
-)
+  (mapcar (lambda (x) (max 0 x)) (mapcar #'- state action)))
 
 (defun game-over (state)
   "Returns whether the game is over or not (in other words, if all of the piles are empty)"
-)
+  (= 0 (reduce #'+ state)))
 
 (defun best-actions-plus (q-table heaps)
   "Returns the best action calculated by q-table for each state, formatted to be human-readable.
 'Heaps' argument uses same convention as learn-nim-plus"
-  (let ((state-count (num-states q-table)) (q-sizes (get-heaps-sizes)) (q-actions (get-heaps-actions)) (bag) (state))
+  (let ((state-count (num-states q-table)) (q-sizes (get-heaps-sizes heaps)) (q-actions (get-heaps-actions heaps)) (bag) (state))
     (dotimes (index state-count bag)
-      (setf (state (index-to-state index q-sizes)))
+      (setf state (index-to-state index q-sizes))
       (if (= state (order-state state))
-          (push (list state (max-index-action-plus q-table state q-sizes q-actions)) bag)))))
+          (push (list state (max-action-plus q-table state q-sizes q-actions -)) bag)))))
 
 (defun play-nim-plus (q-table heaps)
   "Allows the user to play a game against a trained policy set.
 'Heaps' argument uses same convention as learn-nim-plus"
-  (let ((turn 0) (current-state (get-heaps-sizes heaps)) (user 0) (actions (get-heaps-actions heaps)))
-    ))
- 
+  (let ((turn 0) (current-state) (q-sizes (get-heaps-sizes heaps)) (user 0) (q-actions (get-heaps-actions heaps)))
+    (setf current-state q-sizes)
+    (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
+    (loop while (not (game-over current-state))
+          do (if (= turn user)
+                 (setf current-state (get-next-state current-state (player-move-plus current-state q-actions)))
+               (setf current-state (get-next-state current-state (max-action-plus q-table current-state q-sizes q-actions))))
+          do (if (= turn 0) (setf turn 1) (setf turn 0))
+          do (format t "Sticks remaining: ~d" current-state))
+    (if (= user turn) "Player wins!" "Computer wins!")))
+
+(defun player-move-plus (state q-actions)
+  "Asks the user to choose a LEGAL move, returns the chosen move"
+  (let (pile quantity (len (length q-actions)))
+    (loop
+     (format t "~%Take sticks from which pile? (piles 1 to ~d)" len)
+     (setf pile (1- (read)))
+     (if (and (numberp pile) (< pile len) (>= pile 0) (> (elt state pile) 0))
+         (progn
+           (format t "~%Take how many sticks?")
+           (setf quantity (read))
+           (when (and (numberp quantity) (<= quantity (elt q-actions pile)) (>= quantity 1))
+             (return (setf (elt (make-list len :initial-element 0) pile) quantity)))
+           (format t "~%Answer must be between 1 and ~d" (elt q-actions pile)))
+       (format t "~%Answer must be between 1 and ~d, pile must not be empty" len)))))
+             
+(defun q-learner-plus (q-table q-sizes q-actions reward current-state action next-state gamma alpha-func iteration)
+  "Modifies the q-table to incorporate the feedback from the provided action sequence"
+  (let 
+      ((alpha (funcall alpha-func iteration)) 
+       (current-index (state-to-index current-state q-sizes)) 
+       (action-index (action-to-index action q-actions))
+       (next-index (state-to-index next-state q-sizes)))
+    (setf (aref q-table current-index action-index)
+          (+ (* (- 1 alpha) (aref q-table current-index action-index))
+(* alpha (+ reward (* gamma (max-q q-table next-index))))))
+    q-table))
+
+(defun make-q-table-plus (q-sizes q-actions)
+  "Makes a q-table, with initial values all set to 0"
+  (let* ((states (reduce #'* (mapcar #'1+ q-sizes))) (actions (reduce #'+ q-actions))
+         (q-table (make-array (list states actions))))
+    (dotimes (i states q-table)
+      (dotimes (j actions)
+        (setf (aref q-table i j) 
+              (if (reduce (lambda (x y) (and x y)) (mapcar #'>= (index-to-state i q-sizes) (index-to-action j q-actions))) 
+                  0 nil))))))
+    
+
+;--------------------JUNK------------------------------------------------------
+
+(defun player-move-minus (state heap-sizes)
+  (let ((pile) (quantity))
+    (loop
+     (format t "~%Take sticks from which pile? (piles 1 to ~d)" (length heap-sizes))
+     (setf pile (read))
+     (if (and (numberp pile) (<= pile (length heap-sizes)) (>= pile 1) (> (elt state (1- pile)) 0))
+       (progn
+         (format t "~%Take how many sticks?  ")
+         (setf quantity (read))
+         (when (and (numberp quantity) (<= quantity 3) (>= quantity 1))
+           (return (+ (* 3 (1- pile)) (1- quantity)))
+         (format t "~%Answer must be between 1 and 3"))
+       (format t "~%Answer must be between 1 and ~d, pile must not be empty" (length heap-sizes)))))))
+
 (defun play-nim-minus (q-table heap-sizes)
   (let ((turn 0) (current-state heap-sizes) (user 0))
   (if (ask-if-user-goes-first) (setf user 0) (setf user 1))
@@ -377,19 +477,6 @@ Used to collapse redundant states"
   (dolist (x list-state t)
     (if (> x 0) (return nil))))
 
-(defun player-move-minus (state heap-sizes)
-  (let ((pile) (quantity))
-    (loop
-     (format t "~%Take sticks from which pile? (piles 1 to ~d)" (length heap-sizes))
-     (setf pile (read))
-     (if (and (numberp pile) (<= pile (length heap-sizes)) (>= pile 1) (> (elt state (1- pile)) 0))
-       (progn
-         (format t "~%Take how many sticks?  ")
-         (setf quantity (read))
-         (when (and (numberp quantity) (<= quantity 3) (>= quantity 1))
-           (return (+ (* 3 (1- pile)) (1- quantity)))
-         (format t "~%Answer must be between 1 and 3"))
-       (format t "~%Answer must be between 1 and ~d, pile must not be empty" (length heap-sizes)))))))
 
 
 (defun state-to-list (state heap-sizes)
@@ -398,11 +485,7 @@ Used to collapse redundant states"
       (push (- x (mod state (+ 6 x))) list-state)
       (setf state (floor state (+ 6 x))))))
 
-(defun list-to-state (list-state heap-sizes)
-  (let ((state 0) (sum 1) (len (length heap-sizes)))
-    (dotimes (x len state)
-      (incf state (* (- (elt heap-sizes x) (elt list-state x)) sum))
-      (setf sum (* sum (+ (elt heap-sizes x) 6))))))
+(defun list-to-state (list-state heap-sizes))
     
 (defun test-lts ()
   (dotimes (x 9) (dotimes (y 9) (dotimes (z 9) (print (list-to-state (print (list (- 3 x) (- 3 y) (- 3 z))) '(3 3 3)))))))
