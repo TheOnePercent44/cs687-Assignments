@@ -141,12 +141,21 @@ new slot is created).  EQUALP is the test used for duplicates."
 ;Anthony
 (defun tournament-selector (num population fitnesses)
   "Does NUM tournament selections, and puts them all in a list"
-  (let (gathered)
-    (loop for i from 1 to num
-          collect (tournament-select-one population fitnesses)))
+  (loop for i from 1 to num
+        collect (tournament-select-one population fitnesses))
   ;;; IMPLEMENT ME
   )
 
+;Anthony
+;copied the lambda from simple-printer to make my life easier in the event we need to return the best individual
+(defun find-best (pop fitnesses)
+  (let (best-ind best-fit)
+    (mapcar #'(lambda (ind fit)
+		(when (or (not best-ind)
+			    (< best-fit fit))
+		    (setq best-ind ind)
+		      (setq best-fit fit))) pop fitnesses)
+    best-ind))
 
 (defun simple-printer (pop fitnesses)  ;; I'm nice and am providing this for you.  :-)
   "Determines the individual in pop with the best (highest) fitness, then
@@ -161,6 +170,7 @@ prints that fitness and individual in a pleasing manner."
 	        best-fit best-ind)
     fitnesses))
 
+;Anthony
 (defun evolve (generations pop-size
 			          &key setup creator selector modifier evaluator printer)
   "Evolves for some number of GENERATIONS, creating a population of size
@@ -193,8 +203,27 @@ POP-SIZE, using various functions"
     ;;for pop-size times:
     ;;~Create random individual and add to population P (CREATOR)
     ;;print best from initial population (given function above)
+    (funcall #'setup)
+    (let ((population (generate-list pop-size creator))
+          (gen-num 0)
+          fitnesses)
+      (while (< gen-num generations)
+          (let (next-gen)
+            (setf fitnesses (mapcar #'evaluator population))
+            (dotimes (i (/ pop-size 2) t)
+              (let ((parents (apply #'selector 2 population fitnesses))
+                    (children (apply #'modifier (elt parents 0) (elt parents 1))))
+                (setf next-gen (append next-gen children))))
+            (setf population next-gen)
+            )
+        (funcall #'printer population fitnesses)
+        )
+      (funcall #'printer population fitnesses)
+      (find-best population fitnesses) ;;We may not need to return the best in the examples below, but the algorithm does
+      )
 
     ;;while (converging? num iterations?):
+    ;(while
     ;;~for all individuals in population
     ;;~~assess and store fitness (EVALUATOR)
     ;;~~if best fitness so far, store
@@ -247,37 +276,68 @@ POP-SIZE, using various functions"
 (defparameter *boolean-problem* :max-ones)
 ;; perhaps other problems might include... 
 
+;Anthony
 (defun boolean-vector-creator ()
   "Creates a boolean-vector *boolean-vector-length* in size, filled with
 random Ts and NILs, or with random 1s and 0s, your option."
     ;;; IMPLEMENT ME
-
+    (let (vec)
+      (dotimes (i *boolean-vector-length* vec)
+        (setf vec (cons (if (random?) 1 0) vec)) ;;a 0-1 option
+        ;(setf vec (cons (random?) vec))
+        )
+      vec)
   )
 
 
 (defparameter *boolean-crossover-probability* 0.2)
 (defparameter *boolean-mutation-probability* 0.01)
+;Anthony
 (defun boolean-vector-modifier (ind1 ind2)
   "Copies and modifies ind1 and ind2 by crossing them over with a uniform crossover,
 then mutates the children.  *crossover-probability* is the probability that any
 given allele will crossover.  *mutation-probability* is the probability that any
 given allele in a child will mutate.  Mutation simply flips the bit of the allele."
-
-    ;;; IMPLEMENT ME
+  (let ((child1 (copy-list ind1)) (child2 (copy-list ind2)) children)
+    (setf children (dotimes (i *boolean-vector-length* (list child1 child2))
+                     (if (random? *boolean-crossover-probability*) (swap (elt child1 i) (elt child2 i)) nil)))
+    (dotimes (i *boolean-vector-length* children)
+      ;(if (random? *boolean-mutation-probability*) (setf (elt (elt children 0) i) (not (elt (elt children 0) i)))) ;t/nil version
+      (if (random? *boolean-mutation-probability*) (setf (elt (elt children 0) i) (if (= (elt (elt children 0) i) 1) 0 1)));1/0 version
+      ;(if (random? *boolean-mutation-probability*) (setf (elt (elt children 1) i) (not (elt (elt children 1) i)))) ;t/nil version
+      (if (random? *boolean-mutation-probability*) (setf (elt (elt children 1) i) (if (= (elt (elt children 1) i) 1) 0 1)));1/0 version
+      )
+  )
 )
 
+;Anthony
+;;Just do whichever test function our parameter says to do
 (defun boolean-vector-evaluator (ind1)
   "Evaluates an individual, which must be a boolean-vector, and returns
 its fitness."
-
+  (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
     ;;; IMPLEMENT ME
 )
 
+;Anthony
+;;Made this to turn the evaluator into a switch statement basically
+;;we can make more test functions and just change the *boolean-problem* keyword parameter (which is what I assume it's there for)
+(defun max-ones-test (ind1)
+  (let ((fitness 0))
+    (dotimes (i *boolean-vector-length* fitness)
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) nil) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) nil) ;1/0 version
+      )
+    fitness)
+)
 
 
+;Anthony- well, not really at the moment
 (defun boolean-vector-sum-setup ()
   "Does nothing.  Perhaps you might use this to set up various
 (ahem) global variables to define the problem being evaluated, I dunno."
+
+ ;;Got nothing for this for now.
   )
 
 
