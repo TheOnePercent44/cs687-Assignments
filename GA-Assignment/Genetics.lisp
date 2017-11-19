@@ -210,16 +210,17 @@ POP-SIZE, using various functions"
       (while (< gen-num generations) population
           (let (next-gen)
             (setf fitnesses (mapcar evaluator population))
-            (print fitnesses)
+            (print fitnesses) ;just a little debug statement
             (dotimes (i (/ pop-size 2) t)
               (let* ((parents (funcall selector 2 population fitnesses))
                     (children (funcall modifier (elt parents 0) (elt parents 1))))
                 (setf next-gen (append next-gen children))))
+            (funcall printer population fitnesses)
             (setf population next-gen)
             (setf gen-num (+ 1 gen-num))
             )
-        (funcall printer population fitnesses)
         )
+      (setf fitnesses (mapcar evaluator population)) ;fitnesses for final population
       (funcall printer population fitnesses)
       (find-best population fitnesses) ;;We may not need to return the best in the examples below, but the algorithm does
       )
@@ -275,7 +276,7 @@ POP-SIZE, using various functions"
 
 
 (defparameter *boolean-vector-length* 100)
-(defparameter *boolean-problem* :max-ones)
+(defparameter *boolean-problem* :leading-ones-blocks)
 ;; perhaps other problems might include... 
 
 ;Anthony
@@ -318,6 +319,8 @@ given allele in a child will mutate.  Mutation simply flips the bit of the allel
   "Evaluates an individual, which must be a boolean-vector, and returns
 its fitness."
   (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
+  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) nil)
+  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)
     ;;; IMPLEMENT ME
 )
 
@@ -331,6 +334,27 @@ its fitness."
       (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) nil) ;1/0 version
       )
     fitness)
+)
+
+;Anthony
+(defun leading-ones-test (ind1)
+  (let ((fitness 0))
+    (dotimes (i *boolean-vector-length* fitness)
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) (return)) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) (return)) ;1/0 version
+      )
+    fitness)
+)
+
+(defparameter *lob-blocknum* 4)
+;Anthony
+(defun leading-ones-blocks-test (ind1)
+  (let ((fitness 0))
+    (dotimes (i *boolean-vector-length* fitness)
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) (return)) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) (return)) ;1/0 version
+      )
+    (floor fitness *lob-blocknum*)) ;leading-ones is just this but blocknum is set to 1
 )
 
 

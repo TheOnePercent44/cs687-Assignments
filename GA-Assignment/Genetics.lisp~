@@ -203,22 +203,24 @@ POP-SIZE, using various functions"
     ;;for pop-size times:
     ;;~Create random individual and add to population P (CREATOR)
     ;;print best from initial population (given function above)
-    (funcall #'setup)
+    (funcall setup)
     (let ((population (generate-list pop-size creator))
           (gen-num 0)
           fitnesses)
-      (while (< gen-num generations)
+      (while (< gen-num generations) population
           (let (next-gen)
-            (setf fitnesses (mapcar #'evaluator population))
+            (setf fitnesses (mapcar evaluator population))
+            (print fitnesses)
             (dotimes (i (/ pop-size 2) t)
-              (let ((parents (apply #'selector 2 population fitnesses))
-                    (children (apply #'modifier (elt parents 0) (elt parents 1))))
+              (let* ((parents (funcall selector 2 population fitnesses))
+                    (children (funcall modifier (elt parents 0) (elt parents 1))))
                 (setf next-gen (append next-gen children))))
             (setf population next-gen)
+            (setf gen-num (+ 1 gen-num))
             )
-        (funcall #'printer population fitnesses)
+        (funcall printer population fitnesses)
         )
-      (funcall #'printer population fitnesses)
+      (funcall printer population fitnesses)
       (find-best population fitnesses) ;;We may not need to return the best in the examples below, but the algorithm does
       )
 
@@ -273,7 +275,7 @@ POP-SIZE, using various functions"
 
 
 (defparameter *boolean-vector-length* 100)
-(defparameter *boolean-problem* :max-ones)
+(defparameter *boolean-problem* :leading-ones)
 ;; perhaps other problems might include... 
 
 ;Anthony
@@ -316,6 +318,7 @@ given allele in a child will mutate.  Mutation simply flips the bit of the allel
   "Evaluates an individual, which must be a boolean-vector, and returns
 its fitness."
   (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
+  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) nil)
     ;;; IMPLEMENT ME
 )
 
@@ -327,6 +330,16 @@ its fitness."
     (dotimes (i *boolean-vector-length* fitness)
       ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) nil) ;t/nil version
       (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) nil) ;1/0 version
+      )
+    fitness)
+)
+
+;Anthony
+(defun leading-ones-test (ind1)
+  (let ((fitness 0))
+    (dotimes (i *boolean-vector-length* fitness)
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) return) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) return) ;1/0 version
       )
     fitness)
 )
