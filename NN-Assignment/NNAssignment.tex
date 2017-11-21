@@ -1,0 +1,264 @@
+\documentclass{article}  
+  
+\begin{document}  
+  \begin{normalsize}
+  \begin{flushleft}
+  CS-687 Assignment
+  \end{flushleft}
+  \end{normalsize}
+{\LARGE   \textbf{Neural Networks}}\\
+\begin{small}
+\begin{flushright}
+Anthony Sermania\\
+Aakarshika Priydarshi
+\end{flushright}
+\end{small}
+  
+ \begin{flushleft}
+ \begin{Large}
+ NAND and XOR\\
+ \end{Large}
+ \end{flushleft}
+    
+  \begin{flushleft}
+  \begin{small}
+(net-build (convert-data *nand*) 3 1.0 5 20000 1000 t)\\
+(net-build (convert-data *xor*) 3 1.0 5 20000 1000 t)
+  \end{small}
+  \end{flushleft}
+\begin{normalsize}
+Both these functions converge on an average 2 out of 5 times.\\
+The values used for various parameters are as follows: \\
+Hidden neurons- 3\\
+Alpha- 1.0\\
+Initial bound- 5\\
+Maximum iterations- 20000\\
+Modulo- 1000\\\\
+For the successfully converged run, the final iteration’s errors were in the range:\\
+Worst error: 0.049394495 – 1.095704e-6 \\
+Mean error: 0.001236073 – 4.312458e-7 \\\\
+For unsuccessful runs:\\
+Worst error: 0.080000695 – 0.005954131 \\
+Mean error: 0.043875602 – 0.004687714 \\\\
+\end{normalsize}
+
+
+ \begin{flushleft}
+ \begin{Large}
+Voting Records\\
+ \end{Large}
+ \end{flushleft}
+ 
+\textbf{\emph{Net-Build}\\}
+
+  \begin{small}
+(net-build (convert-data *voting-records*) 10 0.75 5 10000 500 t)
+  \end{small}
+  
+  \begin{normalsize}
+  
+  \begin{flushleft}
+  Worst error: 0.0049688066\\
+  Mean error: 0.4583382e-4 \\
+  \end{flushleft}
+  
+  \end{normalsize}
+  
+    \begin{small}
+(net-build (convert-data *voting-records*) 15 0.75 5 2000 250 t)
+  \end{small}
+  \begin{normalsize}
+  
+ \begin{flushleft}
+  Worst error: 0.025502264\\
+  Mean error: 9.190441e-4 \\
+ \end{flushleft}
+  
+  \end{normalsize}
+  
+    \begin{small}
+(net-build (convert-data *voting-records*) 15 0.50 5 2000 250 t)
+  \end{small}
+  \begin{normalsize}
+  
+ \begin{flushleft}
+  Worst error: 0.0064448463\\
+  Mean error: 5.4844434e-4 
+ \end{flushleft}
+  
+  \end{normalsize}
+  
+\begin{normalsize}
+The optimum alpha for this data seems to be 1.0 with 10 hidden units. If the number of hidden neurons is increased, or the alpha decreased, the error increases.\\
+\end{normalsize}
+  
+\begin{flushleft}
+\textbf{\emph{Simple-Generalization}  \\}
+\end{flushleft}
+
+ \begin{small}
+(simple-generalization (convert-data *voting-records*) 10 1.0 5 5000)\\
+  \end{small}
+  \begin{normalsize}
+  
+\begin{flushleft}
+  Mean error: 0.020959353 \\
+\end{flushleft}
+  
+  \end{normalsize}
+
+
+\begin{small}
+(simple-generalization (convert-data *voting-records*) 15 1.0 5 5000)\\
+  \end{small}
+  \begin{normalsize}
+  
+\begin{flushleft}
+  Mean error: 0.023795906 \\
+\end{flushleft}
+  
+  \end{normalsize}
+  
+  \begin{small}
+(simple-generalization (convert-data *voting-records*) 10 0.75 5 5000)\\
+  \end{small}
+  \begin{normalsize}
+  
+\begin{flushleft}
+  Mean error: 0.017280307 \\
+\end{flushleft}
+  
+  \end{normalsize}
+  
+  \begin{small}
+(simple-generalization (convert-data *voting-records*) 10 0.75 5 10000)\\
+  \end{small}
+  \begin{normalsize}
+  
+\begin{flushleft}
+  Mean error: 0.017316049 
+\end{flushleft}
+  
+  \end{normalsize}
+ 
+ \begin{normalsize}
+ The mean error of simple generalization for voting records increases when hidden units are increased from 10 to 15. \\
+ If we keep hidden neurons constant to 10, the mean error decreased with a decrease in alpha, or an increase in number of max- iterations.\\
+ \end{normalsize}
+ 
+ 
+\begin{flushleft}
+ \begin{Large}
+ MPG\\
+ \end{Large}
+\end{flushleft}
+ 
+\textbf{\emph{Net-Build}\\}
+
+  \begin{small}
+(net-build (convert-data *mpg*) 10 1.0 5 5000 250 t)
+  \end{small}
+  
+  \begin{normalsize}
+  
+  \begin{flushleft}
+  Worst error: 1039.6799\\
+  Mean error: 282.291
+  \end{flushleft}
+  
+  
+  \begin{small}
+(net-build (convert-data *mpg*) 10 0.75 2 10000 500 nil)
+  \end{small}
+  
+  \begin{flushleft}
+  Worst error: 1039.6799\\
+  Mean error: 282.291
+  \end{flushleft}
+  
+  
+  This mean error and worst error remains nearly constant throughout the net-build run for this data.\\\\
+  \end{normalsize}
+ 
+ \textbf{\emph{Simple-Generalization}\\}\\
+\begin{normalsize}
+CL-USER> (simple-generalization (converted-data *mpg*) 10 1.0 2 5000)\\
+373.0813\\
+CL-USER> (simple-generalization (converted-data *mpg*) 10 1.0 2 10000)\\
+373.0813\\
+CL-USER> (simple-generalization (converted-data *mpg*) 15 1.0 2 2000)\\
+373.0813\\
+CL-USER> (simple-generalization (converted-data *mpg*) 8 1.0 2 2000)\\
+373.0813\\
+CL-USER> (simple-generalization (converted-data *mpg*) 8 0.5 2 2000)\\
+373.0813\\
+CL-USER> (simple-generalization (converted-data *mpg*) 8 0.75 5 2000)\\
+373.0813\\
+\end{normalsize}
+
+ \begin{normalsize}
+ Simple generalization on "mpg" records gives the exact same \textbf{mean error: 373.0183} for all these parameters.\\
+ This is irrespective of change in alpha, hidden neurons, or iterations.\\
+ \end{normalsize}
+ 
+ 
+\begin{flushleft}
+ \begin{Large}
+ Wine\\
+ \end{Large}
+\end{flushleft}
+ 
+\textbf{\emph{Net-Build}}\\
+
+\begin{small}
+(net-build (converted-data *wine*) 10 0.75 2 10000 500 nil)
+\end{small}
+
+\begin{flushleft}
+\begin{normalsize}
+Worst error: 0.3522382\\
+Mean error: 0.25597098\\
+\end{normalsize}
+\end{flushleft}
+ 
+\begin{small}
+ (net-build (converted-data *wine*) 10 0.75 5 5000 250 nil)
+\end{small}
+
+\begin{flushleft}
+\begin{normalsize}
+Worst error: 0.31726447\\
+Mean error: 0.23408356\\
+\end{normalsize}
+\end{flushleft}
+ 
+\begin{small}
+(net-build (converted-data *wine*) 13 1.0 5 5000 250 nil)
+\end{small}
+
+\begin{flushleft}
+\begin{normalsize}
+Worst error: 0.3394108\\
+Mean error: 0.24198712\\
+\end{normalsize}
+\end{flushleft}
+
+ 
+\textbf{\emph{Simple Generalization}}
+
+ \begin{flushleft}
+ {\normalsize 
+ CL-USER> (simple-generalization (converted-data *wine*) 10 1.0 5 5000)\\
+0.43855825\\
+CL-USER> (simple-generalization (converted-data *wine*) 10 0.75 5 5000)\\
+0.42623\\
+CL-USER> (simple-generalization (converted-data *wine*) 15 0.75 5 5000)\\
+0.35706532\\
+CL-USER> (simple-generalization (converted-data *wine*) 15 0.5 5 5000)\\
+0.4000918
+}\\
+
+{\normalsize Mean error for wine data is the least with optimum value for alpha as 0.75. Optimum number of hidden neurons is 15.\\}
+ 
+ \end{flushleft}
+\end{document}\grid
