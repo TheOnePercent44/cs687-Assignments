@@ -52,12 +52,13 @@
 
 ; The function should return a list of two items: the final V matrix
 ; and the final W matrix of the learned network."
+;shika
 (let* (
 	(io-size (get-io-sizes data))
 	(v (make-random-matrix num-hidden-units (first io-size) initial-bounds)) ;don't do 1+(first iosize) - we just want (first iosize)
 	(w (make-random-matrix (second io-size) num-hidden-units initial-bounds)))
 		(dotimes (i max-iterations)
-			(let ((converted-data (shuffle data))) ;don't convert data here. We can convert-data as we submit requests (see run examples below)
+			(let ((converted-data (shuffle (convert-data data)))) 
 				(dolist (datum converted-data)
 					(if (and (eql 0 (mod i modulo)) (not (eql 0 i))) ; i is mod and starts from 1 -  forward prop
 						(progn
@@ -68,7 +69,7 @@
 									(print err)
 									(progn
 										(let ((w-err (reduce #'max (mapcar #'first err))) (m-err (average (mapcar #'first err))))
-											(format t "Worse error: ~A,Mean error: ~A~%" w-err m-err)
+											(format t "Worst error: ~A\n Mean error: ~A~%" w-err m-err)
 											(if (< w-err *a-good-minimum-error*)
 												(return-from net-build (list v w))))
 									)
@@ -89,22 +90,12 @@
 ; of the data, then tests generalization on the second half, returning
 ; the average error among the samples in the second half.  Don't print any errors,
 ; and use a modulo of MAX-ITERATIONS."
-(let* 
-		((data-size (length data)) 
-		(train-data (subseq data 0 (floor (/ data-size 2)))) 
-		(test-data (subseq data (ceiling (/ data-size 2))))
-		(net (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) 
-		(err '()))
+;shika
+(let* ((data-count (length data)) (train-data (subseq data 0 (floor (/ data-count 2)))) (test-data (subseq data (ceiling (/ data-count 2))))
+   (weights (net-build train-data num-hidden-units alpha initial-bounds max-iterations max-iterations)) (e '()))
     (dolist (i (convert-data test-data))
-      (setf err 
-      	(append err 
-      		(net-error 
-      			(forward-propagate i (first net) (second net)) 
-      			(first (last i)))))
-    )
-	(average (mapcar #'first err))
-)
-)
+      (setf e (append e (net-error (forward-propagate i (first weights) (second weights)) (first (last i))))))
+    (average (mapcar #'first e))))
 
 ;;;Datum is of the form (input-vector expected-output-vector)
 ;Anthony
