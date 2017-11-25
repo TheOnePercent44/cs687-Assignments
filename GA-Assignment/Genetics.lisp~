@@ -210,16 +210,17 @@ POP-SIZE, using various functions"
       (while (< gen-num generations) population
           (let (next-gen)
             (setf fitnesses (mapcar evaluator population))
-            (print fitnesses)
+            (print fitnesses) ;just a little debug statement
             (dotimes (i (/ pop-size 2) t)
               (let* ((parents (funcall selector 2 population fitnesses))
                     (children (funcall modifier (elt parents 0) (elt parents 1))))
                 (setf next-gen (append next-gen children))))
+            (funcall printer population fitnesses)
             (setf population next-gen)
             (setf gen-num (+ 1 gen-num))
             )
-        (funcall printer population fitnesses)
         )
+      (setf fitnesses (mapcar evaluator population)) ;fitnesses for final population
       (funcall printer population fitnesses)
       (find-best population fitnesses) ;;We may not need to return the best in the examples below, but the algorithm does
       )
@@ -275,7 +276,7 @@ POP-SIZE, using various functions"
 
 
 (defparameter *boolean-vector-length* 100)
-(defparameter *boolean-problem* :leading-ones)
+(defparameter *boolean-problem* :leading-ones-blocks)
 ;; perhaps other problems might include... 
 
 ;Anthony
@@ -319,6 +320,7 @@ given allele in a child will mutate.  Mutation simply flips the bit of the allel
 its fitness."
   (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
   (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) nil)
+  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)
     ;;; IMPLEMENT ME
 )
 
@@ -338,10 +340,21 @@ its fitness."
 (defun leading-ones-test (ind1)
   (let ((fitness 0))
     (dotimes (i *boolean-vector-length* fitness)
-      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) return) ;t/nil version
-      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) return) ;1/0 version
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) (return)) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) (return)) ;1/0 version
       )
     fitness)
+)
+
+(defparameter *lob-blocknum* 4)
+;Anthony
+(defun leading-ones-blocks-test (ind1)
+  (let ((fitness 0))
+    (dotimes (i *boolean-vector-length* fitness)
+      ;(if (elt ind1 i) (setf fitness (+ 1 fitness)) (return)) ;t/nil version
+      (if (= 1 (elt ind1 i)) (setf fitness (+ 1 fitness)) (return)) ;1/0 version
+      )
+    (floor fitness *lob-blocknum*)) ;leading-ones is just this but blocknum is set to 1
 )
 
 
@@ -526,6 +539,26 @@ Then fills the remaining slots in the horizon with terminals.
 Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
+(if (= size 1) (random-elt *terminal-set*)
+  (let ((q (make-queue)) root (a (random-elt (print *nonterminal-set*))) (count 1) s)
+    (setf root (list (first a)))
+    (dotimes (n (second a))
+      (push nil (cdr (last root)))
+      (enqueue (list root (1+ n)) q))
+    (loop while (< (+ count (length q)) size)
+          do (setf s (random-dequeue q))
+          do (setf a (random-elt (print *nonterminal-set*)))
+          do (incf count)
+          do (setf (elt (first s) (second s)) (first a))
+          do (dotimes (n (second a)) 
+               (push nil (cdr (last a)))
+               (enqueue (list a (1+ n)) q)))
+    (loop while (not (queue-empty-p q))
+          do (setf s (random-dequeue q))
+          do (setf a (random-elt (print *terminal-set*)))
+          do (setf (elt (first s) (second s)) a))
+    root))
+
   #|
   The simple version of PTC2 you will implement is as follows:
 
@@ -567,9 +600,7 @@ in function form (X) rather than just X."
   |#
 
   ;;; IMPLEMENT ME
-
-  )
-
+)
 
 (defparameter *size-limit* 20)
 (defun gp-creator ()
@@ -577,7 +608,7 @@ in function form (X) rather than just X."
 a tree of that size"
 
     ;;; IMPLEMENT ME
-  )
+    (ptc2 (1+ (random *size-limit*))))
 
 
 
