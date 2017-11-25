@@ -539,6 +539,32 @@ Then fills the remaining slots in the horizon with terminals.
 Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
+(if (= size 1) (random-elt *terminal-set*)
+  (let ((q (make-queue)) root (a (random-elt (print *nonterminal-set*))) (count 1) s)
+    (setf root (list (first a)))
+    (dotimes (n (second a))
+      (push nil (cdr (last root)))
+      (enqueue (list n) q))
+    (print root)
+    (print q)
+    (loop while (< (+ count (length q)) size)
+          do (setf s (random-dequeue q))
+          do (setf a (random-elt (print *nonterminal-set*)))
+          do (incf count)
+          do (setf (elt (first s) (second s)) (first a))
+          do (dotimes (n (second a)) 
+               (push nil (cdr (last a)))
+               (enqueue (list (first a) (1+ n)) q))
+          do (print root)
+          do (print q))
+    (loop while (not (queue-empty-p q))
+          do (setf s (random-dequeue q))
+          do (setf a (random-elt (print *terminal-set*)))
+          do (setf (elt (first s) (second s)) a)
+          do (print root)
+          do (print q))
+    root))
+
   #|
   The simple version of PTC2 you will implement is as follows:
 
@@ -580,9 +606,7 @@ in function form (X) rather than just X."
   |#
 
   ;;; IMPLEMENT ME
-
-  )
-
+)
 
 (defparameter *size-limit* 20)
 (defun gp-creator ()
@@ -590,7 +614,7 @@ in function form (X) rather than just X."
 a tree of that size"
 
     ;;; IMPLEMENT ME
-  )
+    (ptc2 (1+ (random *size-limit*))))
 
 
 
