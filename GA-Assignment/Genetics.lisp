@@ -540,35 +540,27 @@ Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
 (if (= size 1) (random-elt *terminal-set*)
-  (let ((unfilled-positions (make-queue)) root (new-op (random-elt (print *nonterminal-set*))) (count 1) slot-path current-node)
-    (setf root (list (first new-op)))
+  (let ((unfilled-positions (make-queue)) root (new-op (random-elt *nonterminal-set*)) (count 1) slot-path current-node)
+    (setf root (append (list (first new-op)) (make-list (second new-op))))
     (dotimes (slot (second new-op))
-      (setf root (append root '(nil)))
       (enqueue (list '() (list (1+ slot))) unfilled-positions))
-    (print root)
-    (print unfilled-positions)
     (loop while (< (+ count (length unfilled-positions)) size)
           do (setf slot-path (random-dequeue unfilled-positions))
-          do (setf new-op (random-elt (print *nonterminal-set*)))
+          do (setf new-op (random-elt *nonterminal-set*))
           do (incf count)
           do (setf current-node root)
           do (dolist (index (first slot-path))
                (setf current-node (elt current-node index)))
-          do (setf (elt current-node (first (second slot-path))) (first new-op))
+          do (setf (elt current-node (first (second slot-path))) (append (list (first new-op)) (make-list (second new-op))))
           do (dotimes (slot (second new-op)) 
-               ;(push nil (cdr (last a)))
-               (enqueue (list (append (first slot-path) (second slot-path)) (list (1+ slot))) unfilled-positions))
-          do (print root)
-          do (print unfilled-positions))
-    (loop while (not (queue-empty-p unfilled-positions)
+               (enqueue (list (append (first slot-path) (second slot-path)) (list (1+ slot))) unfilled-positions)))
+    (loop while (not (queue-empty-p unfilled-positions))
           do (setf slot-path (random-dequeue unfilled-positions))
-          do (setf new-op (random-elt (print *terminal-set*)))
+          do (setf new-op (random-elt *terminal-set*))
           do (setf current-node root)
           do (dolist (index (first slot-path))
                (setf current-node (elt current-node index)))
-          do (setf (elt current-node (first (second slot-path))) (first new-op))
-          do (print root)
-          do (print unfilled-positions))
+          do (setf (elt current-node (first (second slot-path))) (list new-op)))
     root))
 
   #|
@@ -628,9 +620,9 @@ a tree of that size"
 
 (defun num-nodes (tree)
   "Returns the number of nodes in tree, including the root"
-
-    ;;; IMPLEMENT ME
-  )
+  (if (listp tree) 
+    (reduce #'+ (mapcar #'num-nodes tree)) 
+    1))
 
 
 (defun nth-subtree-parent (tree n)
@@ -662,13 +654,22 @@ If n is bigger than the number of nodes in the tree
   ;((G H I J) 1) 
   ;((G H I J) 2) 
   ;((D E (F (G H I J)) K) 2) 
-  ;0 
-  ;1 
+  ;0
+  ;1
   ;NIL
 
     ;;; IMPLEMENT ME
-
-  )
+    (if (>= (1+ n) (num-nodes tree))
+        (- (1+ n) (num-nodes tree))
+      (let (val (iter 1))
+        (loop while (>= n 0)
+              do (if (= n 0)
+                     (setf val (list tree (1- iter)))
+                   (if (listp (elt tree iter))
+                       (setf val (nth-subtree-parent (elt tree iter) (1- n)))))
+              do (decf n (num-nodes (elt tree iter)))
+              do (incf iter))
+        val)))
 
 
 (defparameter *mutation-size-limit* 10)
@@ -765,7 +766,6 @@ returning most-positive-fixnum as the output of that expression."
 
 
   ;;; IMPLEMENT ME
-
   )
 
 
