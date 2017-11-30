@@ -682,7 +682,22 @@ from 1 to 10 inclusive.  Doesn't damage ind1 or ind2.  Returns
 the two modified versions as a list."
 
     ;;; IMPLEMENT ME
-)
+    (if (random?)
+         ;subtree crossover
+        (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
+              (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
+              (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2))
+              (sub1 (copy-tree (elt (first sub-path1) (second sub-path1)))) (sub2 (copy-tree (elt (first sub-path2) (second sub-path2)))))
+          (setf (elt (first sub-path1) (second sub-path1)) sub2)
+          (setf (elt (first sub-path2) (second sub-path2)) sub1)
+          (list tree1 tree2))
+       ;subtree mutation
+      (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
+             (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
+             (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2)))
+        (setf (elt (first sub-path1) (second sub-path1)) (ptc2 (1+ (random 10))))
+        (setf (elt (first sub-path2) (second sub-path2)) (ptc2 (1+ (random 10))))
+        (list tree1 tree2))))
 
 
 
