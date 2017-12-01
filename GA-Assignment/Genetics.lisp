@@ -423,21 +423,50 @@ its fitness."
 (defparameter *float-min* -5.12)  ;; these will change based on the problem
 (defparameter *float-max* 5.12)   ;; likewise
 
-
+;aakarshika
 (defun float-vector-creator ()
   "Creates a floating-point-vector *float-vector-length* in size, filled with
 random numbers in the range appropriate to the given problem"
     ;;; IMPLEMENT ME
     ;;; you might as well use random uniform numbers from *float-vector-min*
     ;;; to *float-vector-max*.  
+  (let ((population-vec (make-array *float-vector-length*)))
+    (dotimes (i *float-vector-length*)
+      (setf 
+        (aref population-vec i) 
+        (- (random (* 2 *float-max*)) *float-max*) ; (random 2*max)-max  ---> gets random val from -max to +max
+      )
+    )
+  population-vec)
+)
 
+;aakarshika
+(defun gauz-mutate (vec min max p variance)
+  "Adds gaussian noise to vec"
+  (let ((m (make-array (length vec))))
+    (dotimes (i (length vec))
+      (if (> p (random 1.0))
+        (let ((noise (random variance)))
+          (loop while (or 
+                (> (+ (aref vec i) noise) max) 
+                (< (+ (aref vec i) noise) min))
+            do 
+            (setf noise (random variance))
+          )
+          (setf (aref m i) (+ (aref vec i) noise))
+        )
+      )
+    )
+;    (return-from gauz-mutate m)
+  m
   )
-
-
+)
 
 (defparameter *float-crossover-probability* 0.2)
 (defparameter *float-mutation-probability* 0.1)   ;; I just made up this number
 (defparameter *float-mutation-variance* 0.01)     ;; I just made up this number
+
+;aakarshika
 (defun float-vector-modifier (ind1 ind2)
   "Copies and modifies ind1 and ind2 by crossing them over with a uniform crossover,
 then mutates the children.  *crossover-probability* is the probability that any
@@ -447,14 +476,70 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
     ;;; IMPLEMENT ME
     ;;; Note: crossover is probably identical to the bit-vector crossover
     ;;; See "Gaussian Convolution" (Algorithm 11) in the book for mutation
-
+  (let ((child1 (make-array (length ind1))) 
+        (child2 (make-array (length ind2))))
+    (dotimes (i (length ind1))
+      (if (> (random 1.0) *float-crossover-probability*)
+        (progn
+          (setf (aref child1 i) (aref ind2 i))
+          (setf (aref child2 i) (aref ind1 i))
+        )
+        (progn
+          (setf (aref child1 i) (aref ind1 i))
+          (setf (aref child2 i) (aref ind2 i))
+        )
+      )
+    )
+    (list 
+      (gauz-mutate child1 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*) 
+      (gauz-mutate child2 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*)
+    )
+  )
 )
+
+
+;aakarshika
+(defun rastrigin-eval(x)
+  (let ((fitness 0) (n (length x)))
+    (dotimes (i (length x))
+      (setf fitness 
+        (+ fitness 
+          (-  (* (aref x i) (aref x i)) 
+              (* 10 (cos (* 2 pi (aref x i))))
+          )
+        )
+      )
+    )
+    (+ fitness (* 10 n))
+  )
+)
+
+;aakarshika
+(defun rosenbrock-eval(x)
+  (let ((fitness 0) (n (length x)))
+    (dotimes (i (- (length x) 1))
+      (let ((xi (aref x i)) (xi2 (* (aref x i) (aref x i))))
+        (setf fitness 
+            (+ fitness 
+              (* (- 1 xi) (- 1 xi)) 
+              (* 100 (* (aref x (+ 1 i)) (* xi2 xi2)))
+            )
+        )
+      )
+    )
+    fitness
+  )
+)
+
+
 
 (defun float-vector-sum-evaluator (ind1)
   "Evaluates an individual, which must be a floating point vector, and returns
 its fitness."
 
     ;;; IMPLEMENT ME
+    (rastrigin-eval ind1)
+    ;(rosenbrock-eval ind1)
 )
 
 
@@ -890,17 +975,17 @@ returning most-positive-fixnum as the output of that expression."
   (let ((map (make-array (list (length (first lis)) (length lis)))))
     (dotimes (y (length lis) map)
       (dotimes (x (length (elt lis y)))
-	(setf (aref map x y)
-	            (cond ((equalp #\# (elt (elt lis y) x)) nil)
-			      (t t)))))))
+  (setf (aref map x y)
+              (cond ((equalp #\# (elt (elt lis y) x)) nil)
+            (t t)))))))
 
 (defun direction-to-arrow (dir)
   "Returns a character which represents a given direction -- might
 be useful for showing the movement along a path perhaps..."
   (cond ((= dir *n*) #\^)
-	((= dir *s*) #\v)
-	((= dir *e*) #\>)
-	(t #\<)))
+  ((= dir *s*) #\v)
+  ((= dir *e*) #\>)
+  (t #\<)))
 
 (defun maparray (function array &optional (same-type nil))
   "Maps function over array in its major order.  If SAME-TYPE,
@@ -909,16 +994,16 @@ array; but if a function returns an invalid element then an error
 may occur.  If SAME-TYPE is NIL, then the array will accommodate
 any type."
   (let ((new-array (apply #'make-array (array-dimensions array)
-			    :element-type (if same-type
-					          (array-element-type array)
-					      t)
-			      :adjustable (adjustable-array-p array)
-			        (if (vectorp array)
-				          `(:fill-pointer ,(fill-pointer array))
-				      nil))))
+          :element-type (if same-type
+                    (array-element-type array)
+                t)
+            :adjustable (adjustable-array-p array)
+              (if (vectorp array)
+                  `(:fill-pointer ,(fill-pointer array))
+              nil))))
     (dotimes (x (array-total-size array) new-array)
       (setf (row-major-aref new-array x)
-	        (funcall function (row-major-aref array x))))))
+          (funcall function (row-major-aref array x))))))
 
 (defun print-map (map)
   "Prints a map, which must be a 2D array.  If a value in the map
@@ -931,11 +1016,11 @@ trail of spaces on the map for example.  Returns NIL."
     (dotimes (y (second dim) nil)
       (format t "~%")
       (dotimes (x (first dim))
-	(format t "~a"
-		(let ((v (aref map x y)))
-		    (cond ((equal v t) #\.)
-			  ((null v) #\#)
-			  (t v))))))))
+  (format t "~a"
+    (let ((v (aref map x y)))
+        (cond ((equal v t) #\.)
+        ((null v) #\#)
+        (t v))))))))
 
 
 ;; The four directions.  For relative direction, you might
@@ -956,17 +1041,17 @@ and returns that."
   "Returns the new x position if one moved STEPS steps the absolute-dir
 direction from the given x position.  Toroidal."
   `(mod (cond ((= (mod ,absolute-dir 2) *n*) ,x-pos)         ;; n or s
-	            ((= ,absolute-dir *e*) (+ ,x-pos ,steps))     ;; e
-		          (t (+ ,x-pos (- ,steps) *map-width*)))         ;; w
-	*map-width*))
+              ((= ,absolute-dir *e*) (+ ,x-pos ,steps))     ;; e
+              (t (+ ,x-pos (- ,steps) *map-width*)))         ;; w
+  *map-width*))
 
 (defmacro y-pos-at (y-pos absolute-dir &optional (steps 1))
   "Returns the new y position if onee moved STEPS steps in the absolute-dir
 direction from the given y position.  Toroidal."
   `(mod (cond ((= (mod ,absolute-dir 2) *e*) ,y-pos)        ;; e or w
-	            ((= ,absolute-dir *s*) (+ ,y-pos ,steps))     ;; s
-		          (t (+ ,y-pos (- ,steps) *map-height*)))       ;; n
-	*map-height*))
+              ((= ,absolute-dir *s*) (+ ,y-pos ,steps))     ;; s
+              (t (+ ,y-pos (- ,steps) *map-height*)))       ;; n
+  *map-height*))
 
 
 (defparameter *current-move* 0 "The move # that the ant is at right now")
@@ -982,29 +1067,43 @@ direction from the given y position.  Toroidal."
 
 ;;; the function set you have to implement
 
+
+(defun food-found (x y)
+(not (aref *map* x y)))
+
 (defmacro if-food-ahead (then else)
   "If there is food directly ahead of the ant, then THEN is evaluated,
 else ELSE is evaluated"
   ;; because this is an if/then statement, it MUST be implemented as a macro.
 
+;;;`(if (food-found (x-pos-at *current-x-pos* *current-ant-dir*) (y-pos-at *current-y-pos* *current-ant-dir*)) ,then ,else))
+;Not sure how to macro!
     ;;; IMPLEMENT ME
+
+
 )
 
 (defun progn2 (arg1 arg2)
     "Evaluates arg1 and arg2 in succession, then returns the value of arg2"
-    (declaim (ignore arg1))
-    arg2)  ;; ...though in artificial ant, the return value isn't used ... 
+    (eval arg1)
+    (eval arg2)
+arg2)  ;; ...though in artificial ant, the return value isn't used ... 
 
 (defun progn3 (arg1 arg2 arg3)
   "Evaluates arg1, arg2, and arg3 in succession, then returns the value of arg3"
-  (declaim (ignore arg1 arg2))
-  arg3)  ;; ...though in artificial ant, the return value isn't used ...
+   (eval arg1)
+  (eval arg2)
+  (eval arg3)
+arg3)  ;; ...though in artificial ant, the return value isn't used ...
 
 (defun move ()
   "If the move count does not exceed *num-moves*, increments the move count
 and moves the ant forward, consuming any pellet under the new square where the
 ant is now.  Perhaps it might be nice to leave a little trail in the map showing
 where the ant had gone."
+;current x,y
+;if food-found x y --- eaten-pellets++
+;update position and move
 
       ;;; IMPLEMENT ME
   )
@@ -1012,13 +1111,24 @@ where the ant had gone."
 
 (defun left ()
   "Increments the move count, and turns the ant left"
+ (case *current-ant-dir*
+    (0 (setf *current-ant-dir* *w*))
+    (1 (setf *current-ant-dir* *n*))
+    (3 (setf *current-ant-dir* *s*))
+    (2 (setf *current-ant-dir* *e*)))
+  (setf *current-move* (1+ *current-move*))
 
       ;;; IMPLEMENT ME
 )
 
 (defun right ()
   "Increments the move count, and turns the ant right"
-
+(case *current-ant-dir*
+    (0 (setf *current-ant-dir* *e*))
+    (1 (setf *current-ant-dir* *s*))
+    (3 (setf *current-ant-dir* *w*))
+    (2 (setf *current-ant-dir* *n*)))
+(setf *current-move* (1+ *current-move*))
       ;;; IMPLEMENT ME
 )
 
@@ -1050,10 +1160,11 @@ more pellets, higher (better) fitness."
 
 #|
 (evolve 50 500
-	:setup #'gp-artificial-ant-setup
-	:creator #'gp-creator
-	:selector #'tournament-selector
-	:modifier #'gp-modifier
+  :setup #'gp-artificial-ant-setup
+  :creator #'gp-creator
+  :selector #'tournament-selector
+  :modifier #'gp-modifier
         :evaluator #'gp-artificial-ant-evaluator
-	:printer #'simple-printer)
+  :printer #'simple-printer)
 |#
+
