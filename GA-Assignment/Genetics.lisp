@@ -319,9 +319,9 @@ given allele in a child will mutate.  Mutation simply flips the bit of the allel
 (defun boolean-vector-evaluator (ind1)
   "Evaluates an individual, which must be a boolean-vector, and returns
 its fitness."
-  (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
-  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) nil)
-  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)
+  (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) 
+  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) 
+  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)))
     ;;; IMPLEMENT ME
 )
 
@@ -538,8 +538,8 @@ its fitness."
     ;;; IMPLEMENT ME
     ;(rastrigin-eval ind1)
     ;(rosenbrock-eval ind1)
-    (if (eql *float-problem* :rastrigin) (rastrigin-eval ind1) nil)
-    (if (eql *float-problem* :rosenbrock) (rosenbrock-eval ind1) nil)
+    (if (eql *float-problem* :rastrigin) (rastrigin-eval ind1)
+    (if (eql *float-problem* :rosenbrock) (rosenbrock-eval ind1) nil))
 )
 
 
