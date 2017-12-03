@@ -210,13 +210,14 @@ POP-SIZE, using various functions"
       (while (< gen-num generations) population
           (let (next-gen)
             (setf fitnesses (mapcar evaluator population))
-            (print fitnesses) ;just a little debug statement
+            ;(print fitnesses) ;just a little debug statement
             (dotimes (i (/ pop-size 2) t)
               (let* ((parents (funcall selector 2 population fitnesses))
                     (children (funcall modifier (elt parents 0) (elt parents 1))))
                 (setf next-gen (append next-gen children))))
             (funcall printer population fitnesses)
             (setf population next-gen)
+            ;(print population)
             (setf gen-num (+ 1 gen-num))
             )
         )
@@ -419,7 +420,8 @@ its fitness."
 
 (defparameter *float-vector-length* 100)
 
-(defparameter *float-problem :rastrigin)
+(defparameter *float-problem* :rastrigin)
+;(defparameter *float-problem* :rosenbrock)
 (defparameter *float-min* -5.12)  ;; these will change based on the problem
 (defparameter *float-max* 5.12)   ;; likewise
 
@@ -430,36 +432,41 @@ random numbers in the range appropriate to the given problem"
     ;;; IMPLEMENT ME
     ;;; you might as well use random uniform numbers from *float-vector-min*
     ;;; to *float-vector-max*.  
-  (let ((population-vec (make-array *float-vector-length*)))
+  #|(let ((population-vec (make-array *float-vector-length*)))
     (dotimes (i *float-vector-length*)
       (setf 
         (aref population-vec i) 
         (- (random (* 2 *float-max*)) *float-max*) ; (random 2*max)-max  ---> gets random val from -max to +max
       )
     )
-  population-vec)
+  population-vec)|#
+  (let (vec)
+      (dotimes (i *float-vector-length* vec)
+        (setf vec (cons (- (random (* 2 *float-max*)) *float-max*) vec))
+        )
+      vec)
 )
 
 ;aakarshika
 (defun gauz-mutate (vec min max p variance)
   "Adds gaussian noise to vec"
-  (let ((m (make-array (length vec))))
+  (let ()
     (dotimes (i (length vec))
       (if (> p (random 1.0))
         (let ((noise (random variance)))
           (loop while (or 
-                (> (+ (aref vec i) noise) max) 
-                (< (+ (aref vec i) noise) min))
+                (> (+ (elt vec i) noise) max) 
+                (< (+ (elt vec i) noise) min))
             do 
             (setf noise (random variance))
           )
-          (setf (aref m i) (+ (aref vec i) noise))
+          (setf (elt vec i) (+ (elt vec i) noise))
         )
       )
     )
-;    (return-from gauz-mutate m)
-  m
+  vec
   )
+  
 )
 
 (defparameter *float-crossover-probability* 0.2)
@@ -476,24 +483,14 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
     ;;; IMPLEMENT ME
     ;;; Note: crossover is probably identical to the bit-vector crossover
     ;;; See "Gaussian Convolution" (Algorithm 11) in the book for mutation
-  (let ((child1 (make-array (length ind1))) 
-        (child2 (make-array (length ind2))))
-    (dotimes (i (length ind1))
-      (if (> (random 1.0) *float-crossover-probability*)
-        (progn
-          (setf (aref child1 i) (aref ind2 i))
-          (setf (aref child2 i) (aref ind1 i))
-        )
-        (progn
-          (setf (aref child1 i) (aref ind1 i))
-          (setf (aref child2 i) (aref ind2 i))
-        )
-      )
-    )
-    (list 
-      (gauz-mutate child1 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*) 
-      (gauz-mutate child2 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*)
-    )
+  (let ((child1 (copy-list ind1)) (child2 (copy-list ind2)) children)
+    ;(print "Doing crossover")
+    (setf children (dotimes (i *float-vector-length* (list child1 child2))
+                     (if (random? *float-crossover-probability*) (swap (elt child1 i) (elt child2 i)) nil)))
+    ;(print "doing mutate")
+    (setf (elt children 0) (gauz-mutate (elt children 0) *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*))
+    (setf (elt children 1) (gauz-mutate (elt children 1) *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*))
+    children
   )
 )
 
@@ -502,10 +499,11 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
 (defun rastrigin-eval(x)
   (let ((fitness 0) (n (length x)))
     (dotimes (i (length x))
+      ;(print x)
       (setf fitness 
         (+ fitness 
-          (-  (* (aref x i) (aref x i)) 
-              (* 10 (cos (* 2 pi (aref x i))))
+          (-  (* (elt x i) (elt x i)) 
+              (* 10 (cos (* 2 pi (elt x i))))
           )
         )
       )
@@ -518,11 +516,11 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
 (defun rosenbrock-eval(x)
   (let ((fitness 0) (n (length x)))
     (dotimes (i (- (length x) 1))
-      (let ((xi (aref x i)) (xi2 (* (aref x i) (aref x i))))
+      (let ((xi (elt x i)) (xi2 (* (elt x i) (elt x i))))
         (setf fitness 
             (+ fitness 
               (* (- 1 xi) (- 1 xi)) 
-              (* 100 (* (aref x (+ 1 i)) (* xi2 xi2)))
+              (* 100 (* (elt x (+ 1 i)) (* xi2 xi2)))
             )
         )
       )
@@ -538,8 +536,10 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
 its fitness."
 
     ;;; IMPLEMENT ME
-    (rastrigin-eval ind1)
+    ;(rastrigin-eval ind1)
     ;(rosenbrock-eval ind1)
+    (if (eql *float-problem* :rastrigin) (rastrigin-eval ind1) nil)
+    (if (eql *float-problem* :rosenbrock) (rosenbrock-eval ind1) nil)
 )
 
 
