@@ -624,7 +624,7 @@ Then fills the remaining slots in the horizon with terminals.
 Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
-(if (= size 1) (random-elt *terminal-set*)
+(if (= size 1) (random-elt (list *terminal-set*))
   (let ((unfilled-positions (make-queue)) root (new-op (random-elt *nonterminal-set*)) (count 1) slot-path current-node)
     (setf root (append (list (first new-op)) (make-list (second new-op))))
     (dotimes (slot (second new-op))
@@ -767,22 +767,40 @@ from 1 to 10 inclusive.  Doesn't damage ind1 or ind2.  Returns
 the two modified versions as a list."
 
     ;;; IMPLEMENT ME
-    (if (random?)
+    (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2))
+          (n1 (num-nodes tree1)) (n2 (num-nodes tree2))
+          (sub-path1 (if (> n1 1) (nth-subtree-parent tree1 (random (1- n1))) nil))
+          (sub-path2 (if (> n2 1) (nth-subtree-parent tree2 (random (1- n2))) nil)))
+      #|(print tree1)
+      (print tree2)
+      (print n1)
+      (print n2)
+      (print sub-path1)
+      (print sub-path2)
+      (print (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1))
+      (print (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2))
+      |#
+      (if (random?)
          ;subtree crossover
-        (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
-              (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
-              (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2))
-              (sub1 (copy-tree (elt (first sub-path1) (second sub-path1)))) (sub2 (copy-tree (elt (first sub-path2) (second sub-path2)))))
-          (setf (elt (first sub-path1) (second sub-path1)) sub2)
-          (setf (elt (first sub-path2) (second sub-path2)) sub1)
-          (list tree1 tree2))
+          (progn
+            ;(print "crossover")
+            (if sub-path1
+                (setf (elt (first sub-path1) (1+ (second sub-path1))) (copy-tree (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2)))
+              (setf tree1 (copy-tree (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2))))
+            (if sub-path2
+                (setf (elt (first sub-path2) (1+ (second sub-path2))) (copy-tree (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1)))
+              (setf tree2 (copy-tree (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1))))
+            (list tree1 tree2))
        ;subtree mutation
-      (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
-             (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
-             (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2)))
-        (setf (elt (first sub-path1) (second sub-path1)) (ptc2 (1+ (random 10))))
-        (setf (elt (first sub-path2) (second sub-path2)) (ptc2 (1+ (random 10))))
-        (list tree1 tree2))))
+        (progn
+          ;(print "mutation")
+          (if sub-path1
+              (setf (elt (first sub-path1) (1+ (second sub-path1))) (ptc2 (1+ (random 10))))
+            (setf tree1 (ptc2 (1+ (random *mutation-size-limit*)))))
+          (if sub-path2
+              (setf (elt (first sub-path2) (1+ (second sub-path2))) (ptc2 (1+ (random 10))))
+            (setf tree2 (ptc2 (1+ (random *mutation-size-limit*)))))
+          (list tree1 tree2)))))
 
 
 
@@ -858,6 +876,12 @@ individual's fitness.  During evaluation, the expressions
 evaluated may overflow or underflow, or produce NaN.  Handle all
 such math errors by
 returning most-positive-fixnum as the output of that expression."
+  (let ((z 0))
+    (dolist (v *vals* (/ 1 (1+ z)))
+      (setf *x* v)
+      (incf z (abs (- (poly-to-learn *x*) (handler-case (eval ind)
+                     (error (condition)
+                       (format t "~%Warning, ~a" condition) most-positive-fixnum)))))))
   ;;; hint:
   ;;; (handler-case
   ;;;  ....
@@ -1075,13 +1099,14 @@ direction from the given y position.  Toroidal."
   "If there is food directly ahead of the ant, then THEN is evaluated,
 else ELSE is evaluated"
   ;; because this is an if/then statement, it MUST be implemented as a macro.
+  `(if (food-found (x-pos-at *current-x-pos* *current-ant-dir*) (y-pos-at *current-y-pos* *current-ant-dir*)) ,then ,else))
 
-;;;`(if (food-found (x-pos-at *current-x-pos* *current-ant-dir*) (y-pos-at *current-y-pos* *current-ant-dir*)) ,then ,else))
+
+;;;`
 ;Not sure how to macro!
     ;;; IMPLEMENT ME
 
 
-)
 
 (defun progn2 (arg1 arg2)
     "Evaluates arg1 and arg2 in succession, then returns the value of arg2"
@@ -1153,6 +1178,7 @@ for *num-moves* moves.  The fitness is the number of pellets eaten -- thus
 more pellets, higher (better) fitness."
 
       ;;; IMPLEMENT ME
+      
 )
 
 ;; you might choose to write your own printer, which prints out the best

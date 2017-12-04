@@ -319,9 +319,9 @@ given allele in a child will mutate.  Mutation simply flips the bit of the allel
 (defun boolean-vector-evaluator (ind1)
   "Evaluates an individual, which must be a boolean-vector, and returns
 its fitness."
-  (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) nil)
-  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) nil)
-  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)
+  (if (eql *boolean-problem* :max-ones) (max-ones-test ind1) 
+  (if (eql *boolean-problem* :leading-ones) (leading-ones-test ind1) 
+  (if (eql *boolean-problem* :leading-ones-blocks) (leading-ones-blocks-test ind1) nil)))
     ;;; IMPLEMENT ME
 )
 
@@ -420,7 +420,8 @@ its fitness."
 
 (defparameter *float-vector-length* 100)
 
-(defparameter *float-problem :rastrigin)
+(defparameter *float-problem* :rastrigin)
+;(defparameter *float-problem* :rosenbrock)
 (defparameter *float-min* -5.12)  ;; these will change based on the problem
 (defparameter *float-max* 5.12)   ;; likewise
 
@@ -449,7 +450,7 @@ random numbers in the range appropriate to the given problem"
 ;aakarshika
 (defun gauz-mutate (vec min max p variance)
   "Adds gaussian noise to vec"
-  (let ((m (make-array (length vec))))
+  (let ()
     (dotimes (i (length vec))
       (if (> p (random 1.0))
         (let ((noise (random variance)))
@@ -459,13 +460,13 @@ random numbers in the range appropriate to the given problem"
             do 
             (setf noise (random variance))
           )
-          (setf (elt m i) (+ (elt vec i) noise))
+          (setf (elt vec i) (+ (elt vec i) noise))
         )
       )
     )
-;    (return-from gauz-mutate m)
-  m
+  vec
   )
+  
 )
 
 (defparameter *float-crossover-probability* 0.2)
@@ -483,14 +484,13 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
     ;;; Note: crossover is probably identical to the bit-vector crossover
     ;;; See "Gaussian Convolution" (Algorithm 11) in the book for mutation
   (let ((child1 (copy-list ind1)) (child2 (copy-list ind2)) children)
-    (print "Doing crossover")
+    ;(print "Doing crossover")
     (setf children (dotimes (i *float-vector-length* (list child1 child2))
                      (if (random? *float-crossover-probability*) (swap (elt child1 i) (elt child2 i)) nil)))
-    (print "doing mutate")
-    (list 
-      (gauz-mutate child1 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*) 
-      (gauz-mutate child2 *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*)
-    )
+    ;(print "doing mutate")
+    (setf (elt children 0) (gauz-mutate (elt children 0) *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*))
+    (setf (elt children 1) (gauz-mutate (elt children 1) *float-min* *float-max* *float-mutation-probability* *float-mutation-variance*))
+    children
   )
 )
 
@@ -516,11 +516,11 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
 (defun rosenbrock-eval(x)
   (let ((fitness 0) (n (length x)))
     (dotimes (i (- (length x) 1))
-      (let ((xi (aref x i)) (xi2 (* (aref x i) (aref x i))))
+      (let ((xi (elt x i)) (xi2 (* (elt x i) (elt x i))))
         (setf fitness 
             (+ fitness 
               (* (- 1 xi) (- 1 xi)) 
-              (* 100 (* (aref x (+ 1 i)) (* xi2 xi2)))
+              (* 100 (* (elt x (+ 1 i)) (* xi2 xi2)))
             )
         )
       )
@@ -536,8 +536,10 @@ given allele in a child will mutate.  Mutation does gaussian convolution on the 
 its fitness."
 
     ;;; IMPLEMENT ME
-    (rastrigin-eval ind1)
+    ;(rastrigin-eval ind1)
     ;(rosenbrock-eval ind1)
+    (if (eql *float-problem* :rastrigin) (rastrigin-eval ind1)
+    (if (eql *float-problem* :rosenbrock) (rosenbrock-eval ind1) nil))
 )
 
 
@@ -622,7 +624,7 @@ Then fills the remaining slots in the horizon with terminals.
 Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
-(if (= size 1) (random-elt *terminal-set*)
+(if (= size 1) (random-elt (list *terminal-set*))
   (let ((unfilled-positions (make-queue)) root (new-op (random-elt *nonterminal-set*)) (count 1) slot-path current-node)
     (setf root (append (list (first new-op)) (make-list (second new-op))))
     (dotimes (slot (second new-op))
@@ -742,6 +744,7 @@ If n is bigger than the number of nodes in the tree
   ;NIL
 
     ;;; IMPLEMENT ME
+    (print (list tree n))
     (if (>= (1+ n) (num-nodes tree))
         (- (1+ n) (num-nodes tree))
       (let (val (iter 1))
@@ -765,22 +768,23 @@ from 1 to 10 inclusive.  Doesn't damage ind1 or ind2.  Returns
 the two modified versions as a list."
 
     ;;; IMPLEMENT ME
-    (if (random?)
+    (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2))
+          (n1 (num-nodes tree1)) (n2 (num-nodes tree2))
+          (sub-path1 (if (> n1 1) (nth-subtree-parent tree1 (random (1- n1))) (list tree1 0)))
+          (sub-path2 (if (> n2 1) (nth-subtree-parent tree2 (random (1- n2))) (list tree2 0))))
+      (if (random?)
          ;subtree crossover
-        (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
-              (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
-              (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2))
-              (sub1 (copy-tree (elt (first sub-path1) (second sub-path1)))) (sub2 (copy-tree (elt (first sub-path2) (second sub-path2)))))
-          (setf (elt (first sub-path1) (second sub-path1)) sub2)
-          (setf (elt (first sub-path2) (second sub-path2)) sub1)
-          (list tree1 tree2))
+          (progn
+            (setf (elt (first sub-path1) (second sub-path1)) (copy-tree (elt (first sub-path2) (second sub-path2))))
+            (setf (elt (first sub-path2) (second sub-path2)) (copy-tree (elt (first sub-path1) (second sub-path1))))
+            (print (list ind1 ind2 tree1 tree2))
+            (list tree1 tree2))
        ;subtree mutation
-      (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2)) 
-             (sub-index1 (random (num-nodes tree1))) (sub-index2 (random (num-nodes tree2)))
-             (sub-path1 (nth-subtree-parent tree1 sub-index1)) (sub-path2 (nth-subtree-parent tree2 sub-index2)))
-        (setf (elt (first sub-path1) (second sub-path1)) (ptc2 (1+ (random 10))))
-        (setf (elt (first sub-path2) (second sub-path2)) (ptc2 (1+ (random 10))))
-        (list tree1 tree2))))
+        (progn
+          (setf (elt (first sub-path1) (second sub-path1)) (ptc2 (1+ (random 10))))
+          (setf (elt (first sub-path2) (second sub-path2)) (ptc2 (1+ (random 10))))
+          (print (list ind1 ind2 tree1 tree2))
+          (list tree1 tree2)))))
 
 
 
@@ -856,6 +860,13 @@ individual's fitness.  During evaluation, the expressions
 evaluated may overflow or underflow, or produce NaN.  Handle all
 such math errors by
 returning most-positive-fixnum as the output of that expression."
+  (let ((z 0))
+    (print ind)
+    (dolist (v *vals* (/ 1 (1+ z)))
+      (setf *x* v)
+      (incf z (abs (- (poly-to-learn *x*) (handler-case (eval (subst *x* '(x) (copy-tree ind)))
+                     (error (condition)
+                       (format t "~%Warning, ~a" condition) most-positive-fixnum)))))))
   ;;; hint:
   ;;; (handler-case
   ;;;  ....
