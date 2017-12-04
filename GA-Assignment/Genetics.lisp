@@ -624,7 +624,7 @@ Then fills the remaining slots in the horizon with terminals.
 Terminals like X should be added to the tree
 in function form (X) rather than just X."
 
-(if (= size 1) (random-elt (list *terminal-set*))
+(if (= size 1) (list (random-elt *terminal-set*))
   (let ((unfilled-positions (make-queue)) root (new-op (random-elt *nonterminal-set*)) (count 1) slot-path current-node)
     (setf root (append (list (first new-op)) (make-list (second new-op))))
     (dotimes (slot (second new-op))
@@ -1120,7 +1120,7 @@ arg2)  ;; ...though in artificial ant, the return value isn't used ...
   (eval arg2)
   (eval arg3)
 arg3)  ;; ...though in artificial ant, the return value isn't used ...
-
+;Anthony
 (defun move ()
   "If the move count does not exceed *num-moves*, increments the move count
 and moves the ant forward, consuming any pellet under the new square where the
@@ -1129,7 +1129,11 @@ where the ant had gone."
 ;current x,y
 ;if food-found x y --- eaten-pellets++
 ;update position and move
-
+      (if (food-found *current-x-pos* *current-y-pos*) (setf *eaten-pellets* (+ *eaten-pellets* 1)) nil)
+      (setf (aref *map* *current-x-pos* *current-y-pos*) (direction-to-arrow *current-ant-dir*))
+      (setf *current-x-pos* (x-pos-at *current-x-pos* *current-ant-dir*))
+      (setf *current-y-pos* (y-pos-at *current-y-pos* *current-ant-dir*))
+      (+ 1 *current-move*)
       ;;; IMPLEMENT ME
   )
 
@@ -1148,7 +1152,7 @@ where the ant had gone."
 
 (defun right ()
   "Increments the move count, and turns the ant right"
-(case *current-ant-dir*
+  (case *current-ant-dir*
     (0 (setf *current-ant-dir* *e*))
     (1 (setf *current-ant-dir* *s*))
     (3 (setf *current-ant-dir* *w*))
@@ -1167,16 +1171,25 @@ where the ant had gone."
   (setq *terminal-set* '(left right move))
   (setq *map* (make-map *map-strs*))
   (setq *current-move* 0)
-  (setq *eaten-pellets* 0))
+  (setq *eaten-pellets* 0)
+  (setq *current-x-pos* 0)
+  (setq *current-y-pos* 0)
+  (setq *current-ant-dir* *e*)
+)
 
 
 ;; you'll need to implement this as well
-
+;Anthony
 (defun gp-artificial-ant-evaluator (ind)
   "Evaluates an individual by putting it in a fresh map and letting it run
 for *num-moves* moves.  The fitness is the number of pellets eaten -- thus
 more pellets, higher (better) fitness."
-
+  ;(print ind) ;just for my debugging
+  (gp-artificial-ant-setup)
+  (dotimes (i *num-moves* *eaten-pellets*)
+    (eval ind)
+    )
+  
       ;;; IMPLEMENT ME
       
 )

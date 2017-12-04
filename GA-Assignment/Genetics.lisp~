@@ -744,7 +744,6 @@ If n is bigger than the number of nodes in the tree
   ;NIL
 
     ;;; IMPLEMENT ME
-    (print (list tree n))
     (if (>= (1+ n) (num-nodes tree))
         (- (1+ n) (num-nodes tree))
       (let (val (iter 1))
@@ -770,20 +769,37 @@ the two modified versions as a list."
     ;;; IMPLEMENT ME
     (let* ((tree1 (copy-tree ind1)) (tree2 (copy-tree ind2))
           (n1 (num-nodes tree1)) (n2 (num-nodes tree2))
-          (sub-path1 (if (> n1 1) (nth-subtree-parent tree1 (random (1- n1))) (list tree1 0)))
-          (sub-path2 (if (> n2 1) (nth-subtree-parent tree2 (random (1- n2))) (list tree2 0))))
+          (sub-path1 (if (> n1 1) (nth-subtree-parent tree1 (random (1- n1))) nil))
+          (sub-path2 (if (> n2 1) (nth-subtree-parent tree2 (random (1- n2))) nil)))
+      #|(print tree1)
+      (print tree2)
+      (print n1)
+      (print n2)
+      (print sub-path1)
+      (print sub-path2)
+      (print (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1))
+      (print (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2))
+      |#
       (if (random?)
          ;subtree crossover
           (progn
-            (setf (elt (first sub-path1) (second sub-path1)) (copy-tree (elt (first sub-path2) (second sub-path2))))
-            (setf (elt (first sub-path2) (second sub-path2)) (copy-tree (elt (first sub-path1) (second sub-path1))))
-            (print (list ind1 ind2 tree1 tree2))
+            ;(print "crossover")
+            (if sub-path1
+                (setf (elt (first sub-path1) (1+ (second sub-path1))) (copy-tree (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2)))
+              (setf tree1 (copy-tree (if sub-path2 (elt (first sub-path2) (1+ (second sub-path2))) tree2))))
+            (if sub-path2
+                (setf (elt (first sub-path2) (1+ (second sub-path2))) (copy-tree (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1)))
+              (setf tree2 (copy-tree (if sub-path1 (elt (first sub-path1) (1+ (second sub-path1))) tree1))))
             (list tree1 tree2))
        ;subtree mutation
         (progn
-          (setf (elt (first sub-path1) (second sub-path1)) (ptc2 (1+ (random 10))))
-          (setf (elt (first sub-path2) (second sub-path2)) (ptc2 (1+ (random 10))))
-          (print (list ind1 ind2 tree1 tree2))
+          ;(print "mutation")
+          (if sub-path1
+              (setf (elt (first sub-path1) (1+ (second sub-path1))) (ptc2 (1+ (random 10))))
+            (setf tree1 (ptc2 (1+ (random *mutation-size-limit*)))))
+          (if sub-path2
+              (setf (elt (first sub-path2) (1+ (second sub-path2))) (ptc2 (1+ (random 10))))
+            (setf tree2 (ptc2 (1+ (random *mutation-size-limit*)))))
           (list tree1 tree2)))))
 
 
@@ -861,10 +877,9 @@ evaluated may overflow or underflow, or produce NaN.  Handle all
 such math errors by
 returning most-positive-fixnum as the output of that expression."
   (let ((z 0))
-    (print ind)
     (dolist (v *vals* (/ 1 (1+ z)))
       (setf *x* v)
-      (incf z (abs (- (poly-to-learn *x*) (handler-case (eval (subst *x* '(x) (copy-tree ind)))
+      (incf z (abs (- (poly-to-learn *x*) (handler-case (eval ind)
                      (error (condition)
                        (format t "~%Warning, ~a" condition) most-positive-fixnum)))))))
   ;;; hint:
@@ -1084,13 +1099,14 @@ direction from the given y position.  Toroidal."
   "If there is food directly ahead of the ant, then THEN is evaluated,
 else ELSE is evaluated"
   ;; because this is an if/then statement, it MUST be implemented as a macro.
+  `(if (food-found (x-pos-at *current-x-pos* *current-ant-dir*) (y-pos-at *current-y-pos* *current-ant-dir*)) ,then ,else))
 
-;;;`(if (food-found (x-pos-at *current-x-pos* *current-ant-dir*) (y-pos-at *current-y-pos* *current-ant-dir*)) ,then ,else))
+
+;;;`
 ;Not sure how to macro!
     ;;; IMPLEMENT ME
 
 
-)
 
 (defun progn2 (arg1 arg2)
     "Evaluates arg1 and arg2 in succession, then returns the value of arg2"
@@ -1162,6 +1178,7 @@ for *num-moves* moves.  The fitness is the number of pellets eaten -- thus
 more pellets, higher (better) fitness."
 
       ;;; IMPLEMENT ME
+      
 )
 
 ;; you might choose to write your own printer, which prints out the best
