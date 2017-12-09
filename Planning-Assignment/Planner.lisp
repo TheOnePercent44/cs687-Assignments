@@ -355,6 +355,7 @@ on them.  Returns a solved plan, else nil if not solved."
     )
 )
 
+;Anthony
 (defun add-operator (operator plan)
   "Given an OPERATOR and a PLAN makes a copy of the plan [the
 operator should have already been copied out of its template at this point].
@@ -362,10 +363,14 @@ Then adds that copied operator
 the copied plan, and hooks up the orderings so that the new operator is
 after start and before goal.  Returns the modified copy of the plan."
   ;;; hint: make sure you copy the plan!
-  (let ((templan (copy-plan plan)))
+  (let ((temp-plan (copy-plan plan)))
     ;Do something with the copied plan
-    
+    (pushnew operator (plan-operators temp-plan))
+    (push (cons (plan-start) operator) (plan-orderings plan))
+    (push (cons operator (plan-goal)) (plan-orderings plan))
+    (return-from add-operator temp-plan)
   )
+  ;Is it this simple?
   ;;; also hint: use PUSHNEW to add stuff but not duplicates
   ;;; Don't use PUSHNEW everywhere instead of PUSH, just where it
   ;;; makes specific sense.
