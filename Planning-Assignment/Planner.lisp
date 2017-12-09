@@ -366,8 +366,8 @@ after start and before goal.  Returns the modified copy of the plan."
   (let ((temp-plan (copy-plan plan)))
     ;Do something with the copied plan
     (pushnew operator (plan-operators temp-plan))
-    (push (cons (plan-start) operator) (plan-orderings plan))
-    (push (cons operator (plan-goal)) (plan-orderings plan))
+    (push (cons (plan-start temp-plan) operator) (plan-orderings temp-plan))
+    (push (cons operator (plan-goal temp-plan)) (plan-orderings temp-plan))
     (return-from add-operator temp-plan)
   )
   ;Is it this simple?
