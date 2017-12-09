@@ -252,7 +252,7 @@ plus a pointer to the start operator and to the goal operator."
 ;;;;;; want to read up on CONSes of the form (a . b) which I use a lot,
 ;;;;;; and also ASSOCIATION LISTS which are very convenient in certain spots
 
-
+;Anthony ~ No idea if this will do what I expect. At least it will be expensive as reachable is written
 (defun before-p (operator1 operator2 plan)
   "Operator1 is ordered before operator2 in plan?"
 ;;; perhaps you have an existing function which could help here.
@@ -290,7 +290,7 @@ If there is no such pair, return nil"
 	(let ((orders (plan-orderings plan)) (count most-positive-fixnum) (pair nil))
           (dolist (ord orders nil)
             (dolist (prec (operator-preconditions (car ord)) nil)
-              (let ((size (list-length (all-effects prec plan)))) ;;(car ord) will probably need to be something else - adjust
+              (let ((size (list-length (all-operators prec plan))))
                 (if (< size count) 
                     (prog () (setf count size) (setf pair (cons (car ord) prec))) nil)
                 )))
@@ -317,6 +317,7 @@ an effect that can achieve this precondition."
   (gethash precondition *operators-for-precond*)
 )
 
+;Anthony
 (defun select-subgoal (plan current-depth max-depth)
   "For all possible subgoals, recursively calls choose-operator
 on those subgoals.  Returns a solved plan, else nil if not solved."
@@ -326,7 +327,7 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; algorithm says "pick a plan step...", rather than "CHOOSE a
     ;;; plan step....".  This makes the algorithm much faster.  
     (if (> current-depth max-depth) (return-from select-subgoal nil) (+ current-depth 1)) ;just our quick out if we're past depth
-    
+    (choose-operator (pick-precond plan) current-depth max-depth)
 )
 
 
@@ -335,6 +336,14 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
 hook-up-operator for all possible operators in the plan.  If that
 doesn't work, recursively call add operators and call hook-up-operators
 on them.  Returns a solved plan, else nil if not solved."
+  (let ((templan (copy-plan plan)))
+    ;Do something with the copied plan
+    (dolist (tryop (plan-operators templan) nil)
+      (let ((newplan (hook-up-operator tryop (car op-precond-pair) (cdr op-precond-pair) templan current-depth max-depth nil)))
+        (if newplan
+            (return-from choose-operator newplan) nil)))
+  )
+  ;Do something with add-operator and attempt hook-up-operator again?
 )
 
 (defun add-operator (operator plan)
