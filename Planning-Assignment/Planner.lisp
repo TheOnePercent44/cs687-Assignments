@@ -253,6 +253,7 @@ plus a pointer to the start operator and to the goal operator."
 ;;;;;; and also ASSOCIATION LISTS which are very convenient in certain spots
 
 ;Anthony ~ No idea if this will do what I expect. At least it will be expensive as reachable is written
+;??%
 (defun before-p (operator1 operator2 plan)
   "Operator1 is ordered before operator2 in plan?"
 ;;; perhaps you have an existing function which could help here.
@@ -272,6 +273,7 @@ or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
 )
 
+;Anthony- ??%
 (defun inconsistent-p (plan)
   "Plan orderings are inconsistent"
   ;; hint: cyclic-assoc-list
@@ -305,7 +307,7 @@ effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
   (let ((all-ops (all-operators precondition)) (my-ops (plan-operations plan)))
-    (intersection my-ops all-ops :test equalp)) ;This works... if the operator instances count as being eql to their templates? Come back to this in time - might need to make a check excluding uniq
+    (intersection my-ops all-ops :test equalp)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
 )
 
 ;Anthony... this makes sense, right?
@@ -330,20 +332,27 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     (choose-operator (pick-precond plan) current-depth max-depth)
 )
 
-
+;Anthony
 (defun choose-operator (op-precond-pair plan current-depth max-depth)
   "For a given (operator . precondition) pair, recursively call
 hook-up-operator for all possible operators in the plan.  If that
 doesn't work, recursively call add operators and call hook-up-operators
 on them.  Returns a solved plan, else nil if not solved."
-  (let ((templan (copy-plan plan)))
+  (let ((temp-plan (copy-plan plan)))
     ;Do something with the copied plan
-    (dolist (tryop (plan-operators templan) nil)
-      (let ((newplan (hook-up-operator tryop (car op-precond-pair) (cdr op-precond-pair) templan current-depth max-depth nil)))
+    (dolist (tryop (all-effects (cdr op-precond-pair) temp-plan) nil)
+      (let ((newplan (hook-up-operator tryop (car op-precond-pair) (cdr op-precond-pair) temp-plan current-depth max-depth nil)))
         (if newplan
             (return-from choose-operator newplan) nil)))
   )
   ;Do something with add-operator and attempt hook-up-operator again?
+  ;;Doesn't have to be in the previous let- we're making a new plan in add-operator anyways
+  (let ((temp-ops (all-operators (cdr op-precond-pair))))
+    (dolist (tryop temp-ops nil)
+      (let* ((newop (add-operator (instantiate-operator tryop))) (newplan (hook-up-operator newop (car op-precond-pair) (cdr op-precond-pair) templan current-depth max-depth t)))
+        (if newplan
+            (return-from choose-operator newplan) nil)))
+    )
 )
 
 (defun add-operator (operator plan)
