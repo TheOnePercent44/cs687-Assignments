@@ -292,7 +292,7 @@ If there is no such pair, return nil"
 	(let ((orders (plan-orderings plan)) (count most-positive-fixnum) (pair nil))
           (dolist (ord orders nil)
             (dolist (prec (operator-preconditions (car ord)) nil)
-              (let ((size (list-length (all-operators prec plan))))
+              (let ((size (list-length (all-operators prec))))
                 (if (< size count) 
                     (prog () (setf count size) (setf pair (cons (car ord) prec))) nil)
                 )))
@@ -307,7 +307,7 @@ effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
   (let ((all-ops (all-operators precondition)) (my-ops (plan-operations plan)))
-    (intersection my-ops all-ops :test equalp)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
+    (intersection my-ops all-ops :test 'equalp)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
 )
 
 ;Anthony... this makes sense, right?
@@ -329,7 +329,7 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; algorithm says "pick a plan step...", rather than "CHOOSE a
     ;;; plan step....".  This makes the algorithm much faster.  
     (if (> current-depth max-depth) (return-from select-subgoal nil) (+ current-depth 1)) ;just our quick out if we're past depth
-    (choose-operator (pick-precond plan) current-depth max-depth)
+    (choose-operator (pick-precond plan) plan current-depth max-depth)
 )
 
 ;Anthony
@@ -349,7 +349,7 @@ on them.  Returns a solved plan, else nil if not solved."
   ;;Doesn't have to be in the previous let- we're making a new plan in add-operator anyways
   (let ((temp-ops (all-operators (cdr op-precond-pair))))
     (dolist (tryop temp-ops nil)
-      (let* ((newop (add-operator (instantiate-operator tryop))) (newplan (hook-up-operator newop (car op-precond-pair) (cdr op-precond-pair) templan current-depth max-depth t)))
+      (let* ((new-op (instantiate-operator tryop))(temp-plan (add-operator new-op plan)) (newplan (hook-up-operator new-op (car op-precond-pair) (cdr op-precond-pair) temp-plan current-depth max-depth t)))
         (if newplan
             (return-from choose-operator newplan) nil)))
     )
@@ -376,6 +376,7 @@ after start and before goal.  Returns the modified copy of the plan."
   ;;; makes specific sense.
 )
 
+;Anthony
 (defun hook-up-operator (from to precondition plan
 			            current-depth max-depth
 				          new-operator-was-added)
@@ -390,6 +391,13 @@ plan, else nil if not solved."
   ;;; also hint: use PUSHNEW to add stuff but not duplicates  
   ;;; Don't use PUSHNEW everywhere instead of PUSH, just where it
   ;;; makes specific sense.
+  ;;We assume the plan is copied
+  (if (before-p to from plan) (return-from hook-up-operator nil) nil)
+  (let ((new-link (make-link :from from :to to :precond precondition)))
+    (push new-link (plan-links plan))
+    (push (cons from to) (plan-orderings plan))
+    (resolve-threats plan (threats plan (if new-operator-was-added from nil) new-link) current-depth max-depth)
+    )
 )
 
 (defun threats (plan maybe-threatening-operator maybe-threatened-link)
