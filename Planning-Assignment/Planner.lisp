@@ -271,6 +271,8 @@ precond is a predicate."
   "T if operator threatens link in plan, because it's not ordered after
 or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
+(if (not (or (before-p operator (link-from link) plan) (before-p (link-to link) operator plan))) (return-from operator-threatens-link-p nil) t) ;;Just keep going if one of those is true- or maybe return t if this is our last check. Whichever
+;;other tests
 )
 
 ;Anthony- ??%
