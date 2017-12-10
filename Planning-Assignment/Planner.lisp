@@ -413,6 +413,16 @@ situations you need to check are the ones described in the previous paragraph.
 This function should assume that if MAYBE-THREATENING-OPERATOR is NIL, then no
 operator was added and we don't have to check for its threats.  However, we must
 always check for any operators which threaten MAYBE-THREATENED-LINK."
+  (let (threats)
+  ;;If we have an operator to check, check it
+  (if maybe-threatening-operator 
+      (dolist (link (plan-links plan) nil)
+        (if (operator-threatens-link-p maybe-threatening-operator link plan) (push (cons maybe-threatening-operator link) threats) nil))
+    nil)
+  ;;Regardless, check our link for operator threats
+  (dolist (op (plan-operators plan) threats)
+    (if (operator-threatens-link-p op maybe-threatened-link plan) (push (cons op maybe-threatened-link) threats) nil))
+  )
 )
 
 
