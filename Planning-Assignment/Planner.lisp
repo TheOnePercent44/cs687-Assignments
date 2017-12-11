@@ -264,6 +264,10 @@ plus a pointer to the start operator and to the goal operator."
 (defun link-exists-for-precondition-p (precond operator plan)
   "T if there's a link for the precond for a given operator, else nil.
 precond is a predicate."
+  (print precond)
+  (print operator)
+  (print plan)
+  (cdr 5)
 )
 
 
@@ -308,7 +312,7 @@ If there is no such pair, return nil"
 effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
-  (let ((all-ops (all-operators precondition)) (my-ops (plan-operations plan)))
+  (let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)))
     (intersection my-ops all-ops :test 'equalp)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
 )
 
@@ -436,21 +440,43 @@ are copies of the original plan."
   ;;; Also check out MAPC
   ;;; SPEED HINT.  You might handle the one-threat case specially.
   ;;; In that case you could also check for inconsistency right then and there too.
-)
+  ;declare output
+  ;for each bincom:
+  ;generate the plan that resolves each threat using promote/demote, according to bincom
+  ;if it is consistent, add it to output
+  ;return output
+  (let (output plan-clone)
+    (dolist (b (binary-combinations (length threats)) output)
+      (setf plan-clone (copy-plan plan))
+      (mapcar (lambda (threat bool) 
+                (if bool
+                    (promote (car threat) (cdr threat) plan-clone)
+                    (demote (car threat) (cdr threat) plan-clone)))
+              threats b)
+      (if (not (inconsistent-p plan-clone)) (push plan-clone output)))))
 
 (defun promote (operator link plan)
   "Promotes an operator relative to a link.  Doesn't copy the plan."
-)
+  ;add ordering from operator to link-first into the plan
+  (push (append (list operator) (link-from link)) (plan-orderings plan)))
 
 (defun demote (operator link plan)
   "Demotes an operator relative to a link.  Doesn't copy the plan."
-)
+  ;;add ordering from link-second to operator into the plan
+  (push (append (list (link-to link)) operator) (plan-orderings plan)))
 
 (defun resolve-threats (plan threats current-depth max-depth)
   "Tries all combinations of solutions to all the threats in the plan,
 then recursively calls SELECT-SUBGOAL on them until one returns a
 solved plan.  Returns the solved plan, else nil if no solved plan."
-)
+  ;get all promotion-demotion plans
+  ;for each, use as plan and continue iter-deepen
+  ;find solution or fail
+  (let (candidate solution)
+    (dolist (p (all-promotion-demotion-plans plan threats) solution)
+      (setf candidate (select-subgoal p current-depth max-depth))
+      (if candidate (setf solution candidate)) 
+      (if candidate (return)))))
 
 
 
@@ -507,6 +533,7 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
     (loop
      (format t "~%Search Depth: ~d" depth)
      (setf solution (select-subgoal plan 0 depth))
+     (read) ;;;;;;FOR DEBUGGING PLEASE REMEMBER TO REMOVE
      (when solution (return)) ;; break from loop, we're done!
      (incf depth *depth-increment*))
     ;; found the answer if we got here
