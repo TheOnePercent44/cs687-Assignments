@@ -472,12 +472,11 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
   ;get all promotion-demotion plans
   ;for each, use as plan and continue iter-deepen
   ;find solution or fail
-  (print plan)
-  (print threats)
-  (print current-depth)
-  (print max-depth)
-  (cdr 5)
-)
+  (let (candidate solution)
+    (dolist (p (all-promotion-demotion-plans plan threats) solution)
+      (setf candidate (select-subgoal p current-depth max-depth))
+      (if candidate (setf solution candidate)) 
+      (if candidate (return)))))
 
 
 
@@ -534,6 +533,7 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
     (loop
      (format t "~%Search Depth: ~d" depth)
      (setf solution (select-subgoal plan 0 depth))
+     (read) ;;;;;;FOR DEBUGGING PLEASE REMEMBER TO REMOVE
      (when solution (return)) ;; break from loop, we're done!
      (incf depth *depth-increment*))
     ;; found the answer if we got here
