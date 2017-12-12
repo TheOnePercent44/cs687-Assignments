@@ -275,7 +275,12 @@ precond is a predicate."
   "T if operator threatens link in plan, because it's not ordered after
 or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
-(if (not (or (before-p operator (link-from link) plan) (before-p (link-to link) operator plan))) (return-from operator-threatens-link-p nil) t) ;;Just keep going if one of those is true- or maybe return t if this is our last check. Whichever
+(if (and (let ((threateners (operator-effects operator)) (threatened (operator-effects (link-to link))) (counters nil))
+           (dolist (threat threateners counters)
+             (dolist (doomed threatened counters)
+               (if (equalp (negate doomed) threat) (progn () (setf counters t) (return)) nil))
+             (if counters (return counters) nil)))
+         (not (or (before-p operator (link-from link) plan) (before-p (link-to link) operator plan)))) (return-from operator-threatens-link-p t) nil) ;;Just keep going if one of those is true- or maybe return t if this is our last check. Whichever
 ;;other tests
 )
 
@@ -283,7 +288,7 @@ or before the link, and it's got an effect which counters the link's effect."
 (defun inconsistent-p (plan)
   "Plan orderings are inconsistent"
   ;; hint: cyclic-assoc-list
-  (cyclic-assoc-list (plan-operators plan))
+  (cyclic-assoc-list (plan-orderings plan))
   ;other check for inconsistency ~ more than cycles?
 )
 
@@ -305,7 +310,7 @@ If there is no such pair, return nil"
             (dolist (prec (operator-preconditions (rest ord)) nil)
               (let ((size (list-length (all-operators prec))))
                 (if (< size count) 
-                    (prog () (setf count size) (setf pair (cons (first ord) prec))) nil)
+                    (prog () (setf count size) (setf pair (cons (rest ord) prec))) nil)
                 ))
             )
           (return-from pick-precond pair)
@@ -361,8 +366,6 @@ on them.  Returns a solved plan, else nil if not solved."
   ;;Doesn't have to be in the previous let- we're making a new plan in add-operator anyways
   (let ((temp-ops (all-operators (cdr op-precond-pair))))
     (dolist (tryop temp-ops nil)
-      ;;get an error claiming "instantiate-operator" is an undefined function.
-      ;;make-operator does indeed not fill in the gensym uniq value, which produces complaints
       (let* ((new-op (copy-operator tryop))(temp-plan (add-operator new-op plan)) (newplan (hook-up-operator new-op (first op-precond-pair) (rest op-precond-pair) temp-plan current-depth max-depth t)))
         (if newplan
             (return-from choose-operator newplan) nil)))
