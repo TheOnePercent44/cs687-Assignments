@@ -257,7 +257,7 @@ plus a pointer to the start operator and to the goal operator."
 (defun before-p (operator1 operator2 plan)
   "Operator1 is ordered before operator2 in plan?"
 ;;; perhaps you have an existing function which could help here.
-	(reachable (plan-operators plan) operator1 operator2)
+	(reachable (plan-orderings plan) operator1 operator2)
 )
 
 
@@ -361,7 +361,9 @@ on them.  Returns a solved plan, else nil if not solved."
   ;;Doesn't have to be in the previous let- we're making a new plan in add-operator anyways
   (let ((temp-ops (all-operators (cdr op-precond-pair))))
     (dolist (tryop temp-ops nil)
-      (let* ((new-op (instantiate-operator tryop))(temp-plan (add-operator new-op plan)) (newplan (hook-up-operator new-op (car op-precond-pair) (cdr op-precond-pair) temp-plan current-depth max-depth t)))
+      ;;get an error claiming "instantiate-operator" is an undefined function.
+      ;;make-operator does indeed not fill in the gensym uniq value, which produces complaints
+      (let* ((new-op (copy-operator tryop))(temp-plan (add-operator new-op plan)) (newplan (hook-up-operator new-op (first op-precond-pair) (rest op-precond-pair) temp-plan current-depth max-depth t)))
         (if newplan
             (return-from choose-operator newplan) nil)))
     )
