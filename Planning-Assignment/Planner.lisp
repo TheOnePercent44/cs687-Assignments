@@ -275,7 +275,8 @@ precond is a predicate."
   "T if operator threatens link in plan, because it's not ordered after
 or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
-(if (and (let ((threateners (operator-effects operator)) (threatened (operator-effects (link-to link))) (counters nil))
+(if (and (not (or (equalp operator (link-from link)) (link-to link)))
+         (let ((threateners (operator-effects operator)) (threatened (operator-effects (link-to link))) (counters nil))
            (dolist (threat threateners counters)
              (dolist (doomed threatened counters)
                (if (equalp (negate doomed) threat) (progn () (setf counters t) (return)) nil))
@@ -345,7 +346,9 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; you just pick one arbitrarily and that's all.  Note that the
     ;;; algorithm says "pick a plan step...", rather than "CHOOSE a
     ;;; plan step....".  This makes the algorithm much faster.  
-    (if (> current-depth max-depth) (return-from select-subgoal nil) (+ current-depth 1)) ;just our quick out if we're past depth
+    (print "Doing Select-Subgoal on Plan: ")
+    (print-plan plan *standard-output* current-depth)
+    (if (> current-depth max-depth) (return-from select-subgoal nil) (incf current-depth)) ;just our quick out if we're past depth
     (choose-operator (pick-precond plan) plan current-depth max-depth)
 )
 
@@ -382,9 +385,9 @@ after start and before goal.  Returns the modified copy of the plan."
   ;;; hint: make sure you copy the plan!
   (let ((temp-plan (copy-plan plan)))
     ;Do something with the copied plan
-    (pushnew operator (plan-operators temp-plan))
-    (push (cons (plan-start temp-plan) operator) (plan-orderings temp-plan))
-    (push (cons operator (plan-goal temp-plan)) (plan-orderings temp-plan))
+    (push operator (plan-operators temp-plan))
+    (pushnew (cons (plan-start temp-plan) operator) (plan-orderings temp-plan))
+    (pushnew (cons operator (plan-goal temp-plan)) (plan-orderings temp-plan))
     (return-from add-operator temp-plan)
   )
   ;Is it this simple?
@@ -412,7 +415,7 @@ plan, else nil if not solved."
   (if (before-p to from plan) (return-from hook-up-operator nil) nil)
   (let ((new-link (make-link :from from :to to :precond precondition)))
     (push new-link (plan-links plan))
-    (push (cons from to) (plan-orderings plan))
+    (pushnew (cons from to) (plan-orderings plan))
     (resolve-threats plan (threats plan (if new-operator-was-added from nil) new-link) current-depth max-depth)
     )
 )
