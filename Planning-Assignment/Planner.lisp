@@ -355,8 +355,8 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; you just pick one arbitrarily and that's all.  Note that the
     ;;; algorithm says "pick a plan step...", rather than "CHOOSE a
     ;;; plan step....".  This makes the algorithm much faster.  
-    (print "Doing Select-Subgoal on Plan: ")
-    (print-plan plan *standard-output* current-depth)
+    ;(print "Doing Select-Subgoal on Plan: ")
+    ;(print-plan plan *standard-output* current-depth)
     (if (> current-depth max-depth) (return-from select-subgoal nil) (incf current-depth)) ;just our quick out if we're past depth
     (choose-operator (pick-precond plan) plan current-depth max-depth)
 )
