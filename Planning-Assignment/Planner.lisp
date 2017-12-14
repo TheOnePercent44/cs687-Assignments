@@ -264,10 +264,8 @@ plus a pointer to the start operator and to the goal operator."
 (defun link-exists-for-precondition-p (precond operator plan)
   "T if there's a link for the precond for a given operator, else nil.
 precond is a predicate."
-  (print precond)
-  (print operator)
-  (print plan)
-  (cdr 5)
+  (dolist (link (plan-links plan) nil)
+    (if (and (equalp (link-to link) operator) (equalp (link-precond link) precond)) (return-from link-exists-for-precondition-p t) nil))
 )
 
 
@@ -305,12 +303,12 @@ If there is no such pair, return nil"
           (dolist (ord orders nil)
             (dolist (prec (operator-preconditions (first ord)) nil)
               (let ((size (list-length (all-operators prec))))
-                (if (< size count) 
+                (if (and (< size count) (not (link-exists-for-precondition-p prec (first ord) plan)))
                     (prog () (setf count size) (setf pair (cons (first ord) prec))) nil)
                 ))
             (dolist (prec (operator-preconditions (rest ord)) nil)
               (let ((size (list-length (all-operators prec))))
-                (if (< size count) 
+                (if (and (<= size count) (not (link-exists-for-precondition-p prec (rest ord) plan)))
                     (prog () (setf count size) (setf pair (cons (rest ord) prec))) nil)
                 ))
             )
