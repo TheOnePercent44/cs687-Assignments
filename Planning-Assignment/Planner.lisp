@@ -318,14 +318,25 @@ If there is no such pair, return nil"
           )
 )
 
+(defun operator-equals (op1 op2)
+  "Given two operators, check their respective components to ensure thorough equality, ignoring uniq. This is to check operators against their templates for niche circumstances"
+  ;;Is it enough just to check and return the comparison of their uniqs? Probably.
+  (if (and (equalp (operator-name op1) (operator-name op2)) (equalp (operator-preconditions op1) (operator-preconditions op2)) (equalp (operator-effects op1) (operator-effects op2))) t nil)
+)
+
 ;Anthony
 (defun all-effects (precondition plan)
   "Given a precondition, returns a list of ALL operators presently IN THE PLAN which have
 effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
-  (let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)))
-    (intersection my-ops all-ops :test 'equalp)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
+  (let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)) good-ops)
+    ;(intersection all-ops my-ops :test 'operator-equals)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
+    ;tried to be cute and use intersection. Keeps returning the template selections, which obviously doesn't work great
+    ;bad method it is
+    (dolist (template all-ops good-ops) 
+      (dolist (real-op my-ops good-ops)
+        (if (operator-equals real-op template) (progn () (pushnew real-op good-ops) (return)) nil))))
 )
 
 ;Anthony... this makes sense, right?
