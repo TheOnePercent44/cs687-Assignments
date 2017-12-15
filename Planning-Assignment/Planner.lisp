@@ -273,14 +273,15 @@ precond is a predicate."
   "T if operator threatens link in plan, because it's not ordered after
 or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
+;;So, this mess. We check and see if operator is a part of link- can't threaten your own links
+;;Then we get all the effects of the operator and the effects of the to-operator from the link and check for contradictions
 (if (and (not (or (equalp operator (link-from link)) (equalp operator (link-to link))))
          (let ((threateners (operator-effects operator)) (threatened (operator-effects (link-to link))) (counters nil))
            (dolist (threat threateners counters)
              (dolist (doomed threatened counters)
                (if (equalp (negate doomed) threat) (progn () (setf counters t) (return)) nil))
              (if counters (return counters) nil)))
-         (not (or (before-p operator (link-from link) plan) (before-p (link-to link) operator plan)))) (return-from operator-threatens-link-p t) nil) ;;Just keep going if one of those is true- or maybe return t if this is our last check. Whichever
-;;other tests
+         (not (or (before-p operator (link-from link) plan) (before-p (link-to link) operator plan)))) (return-from operator-threatens-link-p t) nil) 
 )
 
 ;Anthony- ??%
@@ -289,6 +290,7 @@ or before the link, and it's got an effect which counters the link's effect."
   ;; hint: cyclic-assoc-list
   (cyclic-assoc-list (plan-orderings plan))
   ;other check for inconsistency ~ more than cycles?
+  ;nope, don't think we need to.
 )
 
 ;Anthony -so much better than the triple loops I initially tried to start in a state of hunger
@@ -299,6 +301,7 @@ If there is no such pair, return nil"
 ;;; to pick a smart one.  Perhaps you might select the precondition
 ;;; which has the fewest possible operators which solve it, so it fails
 ;;; the fastest if it's wrong. 
+;;This does a thing. Totally. Will pick backwards starting from goal for the fewest open preconds remaining.
 	(let ((orders (plan-orderings plan)) (count most-positive-fixnum) (pair nil))
           (dolist (ord orders nil)
             (dolist (prec (operator-preconditions (first ord)) nil)
@@ -316,9 +319,10 @@ If there is no such pair, return nil"
           )
 )
 
+;Anthony
 (defun operator-equals (op1 op2)
   "Given two operators, check their respective components to ensure thorough equality, ignoring uniq. This is to check operators against their templates for niche circumstances"
-  ;;Is it enough just to check and return the comparison of their uniqs? Probably.
+  ;;I felt the need to add this. Operators can't be compared to templates accurately without something like this
   (if (and (equalp (operator-name op1) (operator-name op2)) (equalp (operator-preconditions op1) (operator-preconditions op2)) (equalp (operator-effects op1) (operator-effects op2))) t nil)
 )
 
@@ -328,13 +332,7 @@ If there is no such pair, return nil"
 effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
-  #|(let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)) good-ops)
-    ;(intersection all-ops my-ops :test 'operator-equals)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
-    ;tried to be cute and use intersection. Keeps returning the template selections, which obviously doesn't work great
-    ;bad method it is
-    (dolist (template all-ops good-ops) 
-      (dolist (real-op my-ops good-ops)
-        (if (operator-equals real-op template) (progn () (pushnew real-op good-ops) (return)) nil))))|#
+  ;;Went through several very bad and incorrect versions (trying to intersect with all-operators... which doesn't include start...) before ending up here. This doesn't seem too bad.
   (let ((my-ops (plan-operators plan)) good-ops)
     (dolist (op my-ops good-ops)
       (if (find precondition (operator-effects op) :test 'equalp) (pushnew op good-ops))))
@@ -358,8 +356,9 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; you just pick one arbitrarily and that's all.  Note that the
     ;;; algorithm says "pick a plan step...", rather than "CHOOSE a
     ;;; plan step....".  This makes the algorithm much faster.  
-    ;(print "Doing Select-Subgoal on Plan: ")
-    ;(print-plan plan *standard-output* current-depth)
+    
+    ;;Find a precondition, if we have one and aren't at max depth, go deeper and try to solve it.
+    ;;if we don't have a new precondition to search, we're done. Return the plan.
     (let ((precond (pick-precond plan)))
       (if precond (if (> current-depth max-depth) (return-from select-subgoal nil) (choose-operator precond plan (incf current-depth) max-depth)) (return-from select-subgoal plan)))
 )
@@ -377,7 +376,7 @@ on them.  Returns a solved plan, else nil if not solved."
         (if newplan
             (return-from choose-operator newplan) nil)))
   )
-  ;Do something with add-operator and attempt hook-up-operator again?
+  ;Do something with add-operator and attempt hook-up-operator again
   ;;Doesn't have to be in the previous let- we're making a new plan in add-operator anyways
   (let ((temp-ops (all-operators (cdr op-precond-pair))))
     (dolist (tryop temp-ops nil)
@@ -402,10 +401,6 @@ after start and before goal.  Returns the modified copy of the plan."
     (pushnew (cons operator (plan-goal temp-plan)) (plan-orderings temp-plan))
     (return-from add-operator temp-plan)
   )
-  ;Is it this simple?
-  ;;; also hint: use PUSHNEW to add stuff but not duplicates
-  ;;; Don't use PUSHNEW everywhere instead of PUSH, just where it
-  ;;; makes specific sense.
 )
 
 ;Anthony
@@ -560,7 +555,6 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
     (loop
      (format t "~%Search Depth: ~d" depth)
      (setf solution (select-subgoal plan 0 depth))
-     ;(read) ;;;;;;FOR DEBUGGING PLEASE REMEMBER TO REMOVE
      (when solution (return)) ;; break from loop, we're done!
      (incf depth *depth-increment*))
     ;; found the answer if we got here
@@ -569,7 +563,7 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
 
 
 
-
+#|
 
 ;;;;; TWO-BLOCK-WORLD
 ;;;;; You have two blocks on the table, A and B.   Pretty simple, no?
@@ -601,7 +595,7 @@ doesn't matter really -- but NOT including a goal or start operator")
 ;;; a is on top of b
 (defparameter *goal-preconditions*
   ;; somewhat redundant, is doable with just ((t a-on-b))
-  '((t a-on-b) (t b-on-table) (t a-clear)))
+  '((t a-on-b) (t b-on-table) (t a-clear)))|#
 
 
 ;;;;;; A solution to the two-block blocks world problem:
@@ -677,81 +671,81 @@ doesn't matter really -- but NOT including a goal or start operator")
 ;;; commit to constants.  That makes our search space much nastier.
 ;;; C'est la vie!
 ;;;
-;; (defparameter *operators*
-;;   (list
-;;    ;; move from table operators
-;;    (make-operator :name 'a-table-to-b
-;;   :preconditions '((t a-on-table) (t b-clear) (t a-clear))
-;;   :effects '((nil a-on-table) (nil b-clear) (t a-on-b)))
-;;    (make-operator :name 'a-table-to-c
-;;   :preconditions '((t a-on-table) (t c-clear) (t a-clear))
-;;   :effects '((nil a-on-table) (nil c-clear) (t a-on-c)))
-;;    (make-operator :name 'b-table-to-a
-;;   :preconditions '((t b-on-table) (t a-clear) (t b-clear))
-;;   :effects '((nil b-on-table) (nil a-clear) (t b-on-a)))
-;;    (make-operator :name 'b-table-to-c
-;;   :preconditions '((t b-on-table) (t c-clear) (t b-clear))
-;;   :effects '((nil b-on-table) (nil c-clear) (t b-on-c)))
-;;    (make-operator :name 'c-table-to-a
-;;   :preconditions '((t c-on-table) (t a-clear) (t c-clear))
-;;   :effects '((nil c-on-table) (nil a-clear) (t c-on-a)))
-;;    (make-operator :name 'c-table-to-b
-;;   :preconditions '((t c-on-table) (t b-clear) (t c-clear))
-;;   :effects '((nil c-on-table) (nil b-clear) (t c-on-b)))
-;;    ;; move to table operators
-;;    (make-operator :name 'a-b-to-table
-;;   :preconditions '((t a-on-b) (t a-clear))
-;;   :effects '((t a-on-table) (nil a-on-b) (t b-clear)))
-;;    (make-operator :name 'a-c-to-table
-;;   :preconditions '((t a-on-c) (t a-clear))
-;;   :effects '((t a-on-table) (nil a-on-c) (t c-clear)))
-;;    (make-operator :name 'b-a-to-table
-;;   :preconditions '((t b-on-a) (t b-clear))
-;;   :effects '((t b-on-table) (nil b-on-a) (t a-clear)))
-;;    (make-operator :name 'b-c-to-table
-;;   :preconditions '((t b-on-c) (t b-clear))
-;;   :effects '((t b-on-table) (nil b-on-c) (t c-clear)))
-;;    (make-operator :name 'c-a-to-table
-;;   :preconditions '((t c-on-a) (t c-clear))
-;;   :effects '((t c-on-table) (nil c-on-a) (t a-clear)))
-;;    (make-operator :name 'c-b-to-table
-;;   :preconditions '((t c-on-b) (t c-clear))
-;;   :effects '((t c-on-table) (nil c-on-b) (t b-clear)))
-;;    ;; block-to-block operators
-;;    (make-operator :name 'a-b-to-c
-;;   :preconditions '((t a-on-b) (t a-clear) (t c-clear))
-;;   :effects '((nil a-on-b) (t a-on-c) (nil c-clear) (t b-clear)))
-;;    (make-operator :name 'a-c-to-b
-;;   :preconditions '((t a-on-c) (t a-clear) (t b-clear))
-;;   :effects '((nil a-on-c) (t a-on-b) (nil b-clear) (t c-clear)))
-;;    (make-operator :name 'b-a-to-c
-;;   :preconditions '((t b-on-a) (t b-clear) (t c-clear))
-;;   :effects '((nil b-on-a) (t b-on-c) (nil c-clear) (t a-clear)))
-;;    (make-operator :name 'b-c-to-a
-;;   :preconditions '((t b-on-c) (t b-clear) (t a-clear))
-;;   :effects '((nil b-on-c) (t b-on-a) (nil a-clear) (t c-clear)))
-;;    (make-operator :name 'c-a-to-b
-;;   :preconditions '((t c-on-a) (t c-clear) (t b-clear))
-;;   :effects '((nil c-on-a) (t c-on-b) (nil b-clear) (t a-clear)))
-;;    (make-operator :name 'c-b-to-a
-;;   :preconditions '((t c-on-b) (t c-clear) (t a-clear))
-;;   :effects '((nil c-on-b) (t c-on-a) (nil a-clear) (t b-clear))))
-;;   "A list of strips operators without their uniq gensyms set yet -- 
-;; doesn't matter really -- but NOT including a goal or start operator")
+ (defparameter *operators*
+   (list
+    ;; move from table operators
+    (make-operator :name 'a-table-to-b
+   :preconditions '((t a-on-table) (t b-clear) (t a-clear))
+   :effects '((nil a-on-table) (nil b-clear) (t a-on-b)))
+    (make-operator :name 'a-table-to-c
+   :preconditions '((t a-on-table) (t c-clear) (t a-clear))
+   :effects '((nil a-on-table) (nil c-clear) (t a-on-c)))
+    (make-operator :name 'b-table-to-a
+   :preconditions '((t b-on-table) (t a-clear) (t b-clear))
+   :effects '((nil b-on-table) (nil a-clear) (t b-on-a)))
+    (make-operator :name 'b-table-to-c
+   :preconditions '((t b-on-table) (t c-clear) (t b-clear))
+   :effects '((nil b-on-table) (nil c-clear) (t b-on-c)))
+    (make-operator :name 'c-table-to-a
+   :preconditions '((t c-on-table) (t a-clear) (t c-clear))
+   :effects '((nil c-on-table) (nil a-clear) (t c-on-a)))
+    (make-operator :name 'c-table-to-b
+   :preconditions '((t c-on-table) (t b-clear) (t c-clear))
+   :effects '((nil c-on-table) (nil b-clear) (t c-on-b)))
+    ;; move to table operators
+    (make-operator :name 'a-b-to-table
+   :preconditions '((t a-on-b) (t a-clear))
+   :effects '((t a-on-table) (nil a-on-b) (t b-clear)))
+    (make-operator :name 'a-c-to-table
+   :preconditions '((t a-on-c) (t a-clear))
+   :effects '((t a-on-table) (nil a-on-c) (t c-clear)))
+    (make-operator :name 'b-a-to-table
+   :preconditions '((t b-on-a) (t b-clear))
+   :effects '((t b-on-table) (nil b-on-a) (t a-clear)))
+    (make-operator :name 'b-c-to-table
+   :preconditions '((t b-on-c) (t b-clear))
+   :effects '((t b-on-table) (nil b-on-c) (t c-clear)))
+    (make-operator :name 'c-a-to-table
+   :preconditions '((t c-on-a) (t c-clear))
+   :effects '((t c-on-table) (nil c-on-a) (t a-clear)))
+    (make-operator :name 'c-b-to-table
+   :preconditions '((t c-on-b) (t c-clear))
+   :effects '((t c-on-table) (nil c-on-b) (t b-clear)))
+    ;; block-to-block operators
+    (make-operator :name 'a-b-to-c
+   :preconditions '((t a-on-b) (t a-clear) (t c-clear))
+   :effects '((nil a-on-b) (t a-on-c) (nil c-clear) (t b-clear)))
+    (make-operator :name 'a-c-to-b
+   :preconditions '((t a-on-c) (t a-clear) (t b-clear))
+   :effects '((nil a-on-c) (t a-on-b) (nil b-clear) (t c-clear)))
+    (make-operator :name 'b-a-to-c
+   :preconditions '((t b-on-a) (t b-clear) (t c-clear))
+   :effects '((nil b-on-a) (t b-on-c) (nil c-clear) (t a-clear)))
+    (make-operator :name 'b-c-to-a
+   :preconditions '((t b-on-c) (t b-clear) (t a-clear))
+   :effects '((nil b-on-c) (t b-on-a) (nil a-clear) (t c-clear)))
+    (make-operator :name 'c-a-to-b
+   :preconditions '((t c-on-a) (t c-clear) (t b-clear))
+   :effects '((nil c-on-a) (t c-on-b) (nil b-clear) (t a-clear)))
+    (make-operator :name 'c-b-to-a
+   :preconditions '((t c-on-b) (t c-clear) (t a-clear))
+   :effects '((nil c-on-b) (t c-on-a) (nil a-clear) (t b-clear))))
+   "A list of strips operators without their uniq gensyms set yet -- 
+ doesn't matter really -- but NOT including a goal or start operator")
 
-;; (defparameter *start-effects*
-;;   ;; Sussman Anomaly
-;;   '((t a-on-table) (t b-on-table) (t c-on-a) (t b-clear) (t c-clear))
-;;   "A list of predicates which specify the initial state")
+ (defparameter *start-effects*
+   ;; Sussman Anomaly
+   '((t a-on-table) (t b-on-table) (t c-on-a) (t b-clear) (t c-clear))
+   "A list of predicates which specify the initial state")
 
-;; (defparameter *start-effects*
-;;   ;; another simple situation: all on table
-;;   '((t a-on-table) (t a-clear)
-;;     (t b-on-table) (t b-clear)
-;;     (t c-on-table) (t c-clear))) 
+#| (defparameter *start-effects*
+   ;; another simple situation: all on table
+   '((t a-on-table) (t a-clear)
+     (t b-on-table) (t b-clear)
+     (t c-on-table) (t c-clear))) |#
 
-;; (defparameter *goal-preconditions*
-;;   '((t a-on-b) (t b-on-c) (t c-on-table) (t a-clear)))
+ (defparameter *goal-preconditions*
+   '((t a-on-b) (t b-on-c) (t c-on-table) (t a-clear)))
 
 
 ;;;; An Example on the Sussman Anomaly:
