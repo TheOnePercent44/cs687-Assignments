@@ -273,7 +273,7 @@ precond is a predicate."
   "T if operator threatens link in plan, because it's not ordered after
 or before the link, and it's got an effect which counters the link's effect."
 ;;; SPEED HINT.  Test the easy tests before the more costly ones.
-(if (and (not (or (equalp operator (link-from link)) (link-to link)))
+(if (and (not (or (equalp operator (link-from link)) (equalp operator (link-to link))))
          (let ((threateners (operator-effects operator)) (threatened (operator-effects (link-to link))) (counters nil))
            (dolist (threat threateners counters)
              (dolist (doomed threatened counters)
@@ -328,13 +328,16 @@ If there is no such pair, return nil"
 effects which can achieve this precondition."
   ;; hint: there's short, efficient way to do this, and a long,
   ;; grotesquely inefficient way.  Don't do the inefficient way.
-  (let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)) good-ops)
+  #|(let ((all-ops (all-operators precondition)) (my-ops (plan-operators plan)) good-ops)
     ;(intersection all-ops my-ops :test 'operator-equals)) ;This works... if the operator instances count as being equalp to their templates? Come back to this in time - might need to make a check excluding uniq
     ;tried to be cute and use intersection. Keeps returning the template selections, which obviously doesn't work great
     ;bad method it is
     (dolist (template all-ops good-ops) 
       (dolist (real-op my-ops good-ops)
-        (if (operator-equals real-op template) (progn () (pushnew real-op good-ops) (return)) nil))))
+        (if (operator-equals real-op template) (progn () (pushnew real-op good-ops) (return)) nil))))|#
+  (let ((my-ops (plan-operators plan)) good-ops)
+    (dolist (op my-ops good-ops)
+      (if (find precondition (operator-effects op) :test 'equalp) (pushnew op good-ops))))
 )
 
 ;Anthony... this makes sense, right?
@@ -357,9 +360,8 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;;; plan step....".  This makes the algorithm much faster.  
     ;(print "Doing Select-Subgoal on Plan: ")
     ;(print-plan plan *standard-output* current-depth)
-    (if (> current-depth max-depth) (return-from select-subgoal nil) (incf current-depth)) ;just our quick out if we're past depth
     (let ((precond (pick-precond plan)))
-      (if precond (choose-operator precond plan current-depth max-depth) (return-from select-subgoal plan)))
+      (if precond (if (> current-depth max-depth) (return-from select-subgoal nil) (choose-operator precond plan (incf current-depth) max-depth)) (return-from select-subgoal plan)))
 )
 
 ;Anthony
@@ -500,7 +502,8 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
     (dolist (p (all-promotion-demotion-plans plan threats) solution)
       (setf candidate (select-subgoal p current-depth max-depth))
       (if candidate (setf solution candidate)) 
-      (if candidate (return)))))
+      (if candidate (return)))
+    (return-from resolve-threats solution)))
 
 
 
@@ -557,7 +560,7 @@ solved plan.  Returns the solved plan, else nil if no solved plan."
     (loop
      (format t "~%Search Depth: ~d" depth)
      (setf solution (select-subgoal plan 0 depth))
-     (read) ;;;;;;FOR DEBUGGING PLEASE REMEMBER TO REMOVE
+     ;(read) ;;;;;;FOR DEBUGGING PLEASE REMEMBER TO REMOVE
      (when solution (return)) ;; break from loop, we're done!
      (incf depth *depth-increment*))
     ;; found the answer if we got here
@@ -593,6 +596,7 @@ doesn't matter really -- but NOT including a goal or start operator")
 ;;; b is on top of a
 (defparameter *start-effects*
   '((t a-on-table) (t b-on-a) (t b-clear)))
+;'((t a-on-table) (t b-on-table) (t a-clear) (t b-clear))) ;;Abbreviated start for testing
 
 ;;; a is on top of b
 (defparameter *goal-preconditions*
