@@ -358,7 +358,8 @@ on those subgoals.  Returns a solved plan, else nil if not solved."
     ;(print "Doing Select-Subgoal on Plan: ")
     ;(print-plan plan *standard-output* current-depth)
     (if (> current-depth max-depth) (return-from select-subgoal nil) (incf current-depth)) ;just our quick out if we're past depth
-    (choose-operator (pick-precond plan) plan current-depth max-depth)
+    (let ((precond (pick-precond plan)))
+      (if precond (choose-operator precond plan current-depth max-depth) (return-from select-subgoal plan)))
 )
 
 ;Anthony
